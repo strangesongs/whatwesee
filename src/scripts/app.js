@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const photosPerPage = 12;
     let currentPage = 1;
     let allPhotos = [];
+    let currentPhotoIndex = 0;
 
     // Create pagination container
     const pagination = document.createElement('div');
@@ -23,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const pagePhotos = allPhotos.slice(start, end);
         
         photoGallery.innerHTML = '';
-        pagePhotos.forEach(photo => {
+        pagePhotos.forEach((photo, index) => {
             const img = document.createElement('img');
             img.src = `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_b.jpg`;
             img.alt = photo.title;
@@ -31,15 +32,48 @@ document.addEventListener('DOMContentLoaded', function() {
             const largeImageUrl = `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_b.jpg`;
             
             img.addEventListener('click', () => {
-                modal.innerHTML = `<img src="${largeImageUrl}" alt="${photo.title}">`;
-                modal.style.display = 'block';
+                currentPhotoIndex = start + index;
+                showPhotoInModal(currentPhotoIndex);
             });
             
             photoGallery.appendChild(img);
         });
 
-        // Update pagination buttons
         updatePagination();
+    }
+
+    function showPhotoInModal(index) {
+        const photo = allPhotos[index];
+        const largeImageUrl = `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_b.jpg`;
+        modal.innerHTML = `
+            <img src="${largeImageUrl}" alt="${photo.title}">
+            <div class="modal-nav">
+                <button class="modal-prev">←</button>
+                <button class="modal-next">→</button>
+            </div>
+        `;
+        modal.style.display = 'block';
+
+        // Add click handlers for navigation buttons
+        modal.querySelector('.modal-prev').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigatePhotos('prev');
+        });
+
+        modal.querySelector('.modal-next').addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigatePhotos('next');
+        });
+    }
+
+    function navigatePhotos(direction) {
+        if (direction === 'prev' && currentPhotoIndex > 0) {
+            currentPhotoIndex--;
+            showPhotoInModal(currentPhotoIndex);
+        } else if (direction === 'next' && currentPhotoIndex < allPhotos.length - 1) {
+            currentPhotoIndex++;
+            showPhotoInModal(currentPhotoIndex);
+        }
     }
 
     // Function to update pagination buttons
@@ -79,8 +113,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.style.display === 'block') {
-            modal.style.display = 'none';
+        if (modal.style.display === 'block') {
+            switch(e.key) {
+                case 'Escape':
+                    modal.style.display = 'none';
+                    break;
+                case 'ArrowLeft':
+                    navigatePhotos('prev');
+                    break;
+                case 'ArrowRight':
+                    navigatePhotos('next');
+                    break;
+            }
         }
     });
 });
