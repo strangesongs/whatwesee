@@ -48,8 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.innerHTML = `
             <img src="${largeImageUrl}" alt="${photo.title}">
             <div class="modal-nav">
-                <button class="modal-prev">←</button>
-                <button class="modal-next">→</button>
+                <button class="modal-prev">&lt;</button>
+                <button class="modal-next">&gt;</button>
             </div>
         `;
         modal.style.display = 'block';
