@@ -1,0 +1,96 @@
+/* Import Skeleton CSS */
+@import url('skeleton.css');
+
+/* Custom styles that override/extend Skeleton */
+body {
+    text-align: center;
+    font-family: "Raleway", "HelveticaNeue", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+/* Navigation */
+nav {
+    margin: 2rem 0;
+}
+
+nav ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin: 0 2rem;
+}
+
+nav ul li a {
+    text-decoration: none;
+    color: #222;
+    font-size: 1.8rem;
+    font-weight: 400; /* Changed from 600 to 400 for lighter weight */
+}
+
+/* Photo Gallery */
+#photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+#photo-gallery img {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;  /* Makes all grid items square */
+    object-fit: contain;  /* Changed from 'cover' to 'contain' */
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  
+}
+
+/* Pagination */
+.pagination {
+    margin: 2rem 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+}
+
+.pagination button {
+    border: none;
+    background: none;
+    color: #222;
+    font-size: 1.8rem;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+
+.pagination button:disabled {
+    color: #999;
+    cursor: not-allowed;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 1000;
+    cursor: pointer;
+}
+
+.modal img {
+    max-width: 95%;
+    max-height: 95vh;
+    margin: auto;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
