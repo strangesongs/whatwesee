@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strangesongs Concept B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --fog: #eef1ef;
+      --stone: #dfe5e1;
+      --ink: #101514;
+      --muted: #58615d;
+      --line: rgba(16, 21, 20, 0.12);
+      --accent: #3e6257;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 1.4rem clamp(1rem, 2.3vw, 2.8rem) 4rem;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 92% 10%, rgba(62,98,87,0.12), transparent 34%),
+        linear-gradient(180deg, #f8faf8 0%, var(--fog) 62%, var(--stone) 100%);
+      font-family: "IBM Plex Sans", sans-serif;
+    }
+    .wrap {
+      width: min(1160px, 100%);
+      margin: 0 auto;
+    }
+    .site-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .wordmark {
+      font: 700 clamp(2.4rem, 4vw, 3.8rem)/1 "Fraunces", serif;
+      letter-spacing: -0.04em;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 2rem;
+      margin-top: 1.5rem;
+      align-items: start;
+    }
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      max-width: 38ch;
+    }
+    .hero h1 {
+      margin: 0;
+      font: 700 clamp(2.3rem, 5vw, 4.8rem)/0.95 "Fraunces", serif;
+      letter-spacing: -0.04em;
+    }
+    .album-rail {
+      display: flex;
+      gap: 0.65rem;
+      overflow-x: auto;
+      margin-top: 1.6rem;
+      padding-bottom: 0.45rem;
+    }
+    .pill {
+      white-space: nowrap;
+      padding: 0.5rem 0.82rem;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255,255,255,0.52);
+    }
+    .pill.active {
+      background: var(--accent);
+      color: #f6fbf9;
+      border-color: var(--accent);
+    }
+    .gallery {
+      margin-top: 1.4rem;
+      column-count: 3;
+      column-gap: 1.1rem;
+    }
+    .photo {
+      break-inside: avoid;
+      margin: 0 0 1.1rem;
+      background: linear-gradient(135deg, #d4dcda, #bcc7c3);
+      border: 1px solid rgba(16,21,20,0.08);
+    }
+    .portrait { aspect-ratio: 4 / 5; }
+    .landscape { aspect-ratio: 3 / 2; }
+    .square { aspect-ratio: 1 / 1; }
+    .contact {
+      margin-top: 3.8rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      border-top: 1px solid var(--line);
+      padding-top: 2rem;
+    }
+    .contact h2 {
+      margin: 0 0 0.8rem;
+      font: 700 clamp(1.9rem, 3vw, 2.9rem)/1 "Fraunces", serif;
+      letter-spacing: -0.04em;
+    }
+    .contact p {
+      margin: 0 0 0.9rem;
+      color: var(--muted);
+    }
+    .contact a {
+      color: var(--ink);
+      text-decoration: none;
+      border-bottom: 1px solid var(--accent);
+    }
+    @media (max-width: 860px) {
+      .hero, .contact { grid-template-columns: 1fr; }
+      .gallery { column-count: 2; }
+    }
+    @media (max-width: 560px) {
+      .gallery { column-count: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="site-header">
+      <div class="wordmark">what we see</div>
+      <div>photos &nbsp;&nbsp; contact</div>
+    </header>
+    <section class="hero">
+      <div>
+        <h1>Soft green, cooler paper.</h1>
+      </div>
+      <p>This version borrows the sparse, text-led tone from strangesongs but gives the photography site a slightly cooler, archival feel.</p>
+    </section>
+    <div class="album-rail">
+      <div class="pill active">all photos</div>
+      <div class="pill">fall 2024</div>
+      <div class="pill">brazil 2024</div>
+      <div class="pill">sante fe</div>
+      <div class="pill">ohio</div>
+    </div>
+    <section class="gallery">
+      <div class="photo portrait"></div>
+      <div class="photo landscape"></div>
+      <div class="photo square"></div>
+      <div class="photo landscape"></div>
+      <div class="photo portrait"></div>
+      <div class="photo square"></div>
+    </section>
+    <section class="contact">
+      <div>
+        <h2>Contact</h2>
+        <p>j cretella, artist and writer in los angeles, california.</p>
+      </div>
+      <div>
+        <p><a href="#">jcrtll@protonmail.com</a></p>
+        <p><a href="#">strangesongs.github.io</a></p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
