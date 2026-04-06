@@ -180,6 +180,7 @@ main {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 1rem;
 }
 
@@ -187,6 +188,16 @@ main {
     margin: 0;
     color: var(--ink-soft);
     font-size: 1.25rem;
+}
+
+.status-message {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 1.1rem;
+}
+
+.status-message.is-error {
+    color: #8f2f2f;
 }
 
 .load-more {

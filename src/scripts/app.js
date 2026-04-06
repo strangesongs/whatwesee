@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusEl = document.getElementById('status');
     const albumRail = document.getElementById('album-rail');
     const galleryMetaEl = document.getElementById('gallery-meta');
+    const retryLoadBtn = document.getElementById('retry-load');
     const loadMoreBtn = document.getElementById('load-more');
 
     const lightboxEl = document.getElementById('lightbox');
@@ -31,6 +32,173 @@ document.addEventListener('DOMContentLoaded', () => {
     let suppressRailClick = false;
     const desktopHoverMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
     let lightboxControlsTimer = null;
+    let lightboxLastFocusedEl = null;
+
+    const FETCH_TIMEOUT_MS = 9000;
+    const FETCH_MAX_RETRIES = 2;
+    const CACHE_PUBLIC_PHOTOS_KEY = 'whatwesee.publicPhotos.v1';
+    const CACHE_ALBUMS_KEY = 'whatwesee.albums.v1';
+    const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
+    const ERROR_MONITOR_URL = '';
+
+    function clampText(text, maxLength) {
+        const value = typeof text === 'string' ? text : String(text || '');
+        if (value.length <= maxLength) {
+            return value;
+        }
+
+        return `${value.slice(0, maxLength)}...`;
+    }
+
+    function isLikelyPhoto(item) {
+        return Boolean(item && item.id && item.server && item.secret);
+    }
+
+    function normalizePhotoList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+
+        return list.filter(isLikelyPhoto);
+    }
+
+    function normalizeAlbumList(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+
+        return list
+            .filter((item) => item && item.id)
+            .map((item) => ({
+                id: String(item.id),
+                title: item.title ? String(item.title) : 'Untitled album',
+                count: Number(item.count || 0)
+            }));
+    }
+
+    function reportClientIssue(payload) {
+        if (!ERROR_MONITOR_URL) {
+            return;
+        }
+
+        try {
+            const safePayload = {
+                type: payload && payload.type ? String(payload.type) : 'unknown',
+                message: clampText(payload && payload.message ? payload.message : 'No message', 280),
+                file: payload && payload.file ? clampText(payload.file, 200) : undefined,
+                line: payload && Number.isFinite(payload.line) ? payload.line : undefined,
+                column: payload && Number.isFinite(payload.column) ? payload.column : undefined
+            };
+
+            const body = JSON.stringify({
+                source: 'whatwesee-client',
+                page: window.location.pathname,
+                time: new Date().toISOString(),
+                ...safePayload
+            });
+
+            if (navigator.sendBeacon) {
+                const blob = new Blob([body], { type: 'application/json' });
+                navigator.sendBeacon(ERROR_MONITOR_URL, blob);
+                return;
+            }
+
+            fetch(ERROR_MONITOR_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+                keepalive: true
+            }).catch(() => {});
+        } catch (error) {
+            console.warn('Client issue reporting failed', error);
+        }
+    }
+
+    function wait(ms) {
+        return new Promise((resolve) => {
+            window.setTimeout(resolve, ms);
+        });
+    }
+
+    function withTimeout(promise, timeoutMs, timeoutMessage) {
+        const timeoutPromise = new Promise((_, reject) => {
+            window.setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+        });
+
+        return Promise.race([promise, timeoutPromise]);
+    }
+
+    function fetchJsonWithRetry(url, options) {
+        const maxRetries = options && Number.isInteger(options.maxRetries) ? options.maxRetries : FETCH_MAX_RETRIES;
+        const timeoutMs = options && Number.isFinite(options.timeoutMs) ? options.timeoutMs : FETCH_TIMEOUT_MS;
+        let attempt = 0;
+
+        function runAttempt() {
+            return withTimeout(fetchJson(url), timeoutMs, 'Request timed out')
+                .catch((error) => {
+                    if (attempt >= maxRetries) {
+                        throw error;
+                    }
+
+                    attempt += 1;
+                    const backoffMs = Math.min(350 * Math.pow(2, attempt), 1800);
+                    return wait(backoffMs).then(runAttempt);
+                });
+        }
+
+        return runAttempt();
+    }
+
+    function saveToCache(key, value) {
+        try {
+            const payload = {
+                savedAt: Date.now(),
+                data: value
+            };
+
+            localStorage.setItem(key, JSON.stringify(payload));
+        } catch (error) {
+            console.warn('Cache write failed', error);
+        }
+    }
+
+    function readFromCache(key) {
+        try {
+            const rawValue = localStorage.getItem(key);
+            if (!rawValue) {
+                return null;
+            }
+
+            const parsed = JSON.parse(rawValue);
+
+            if (Array.isArray(parsed)) {
+                // Backward compatibility with older cache format.
+                return parsed;
+            }
+
+            if (!parsed || !Number.isFinite(parsed.savedAt)) {
+                return null;
+            }
+
+            if (Date.now() - parsed.savedAt > CACHE_TTL_MS) {
+                localStorage.removeItem(key);
+                return null;
+            }
+
+            return parsed.data;
+        } catch (error) {
+            console.warn('Cache read failed', error);
+            return null;
+        }
+    }
+
+    function updateRetryButton(show) {
+        if (!retryLoadBtn) {
+            return;
+        }
+
+        retryLoadBtn.hidden = !show;
+    }
 
     function bestPhotoSource(photo) {
         if (photo.url_l && photo.width_l && photo.height_l) {
@@ -78,6 +246,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         statusEl.textContent = message;
         statusEl.classList.toggle('is-error', Boolean(isError));
+    }
+
+    function showUiLoadingState(message) {
+        setStatus(message || 'Loading photos...');
+        updateRetryButton(false);
+    }
+
+    function clearStatus() {
+        setStatus('', false);
+    }
+
+    function showUiErrorState(message) {
+        setStatus(message, true);
+        updateRetryButton(true);
     }
 
     function currentRenderedPhotos() {
@@ -279,10 +461,11 @@ document.addEventListener('DOMContentLoaded', () => {
             extras: 'url_z,url_c,url_l,width_z,height_z,width_c,height_c,width_l,height_l'
         });
 
-        return fetchJson(endpoint).then((data) => {
-            const photos = data && data.photos && data.photos.photo ? data.photos.photo : [];
+        return fetchJsonWithRetry(endpoint).then((data) => {
+            const photos = normalizePhotoList(data && data.photos && data.photos.photo ? data.photos.photo : []);
             publicPhotos = photos;
             albumPhotoCache.set('all', photos);
+            saveToCache(CACHE_PUBLIC_PHOTOS_KEY, photos);
             return photos;
         });
     }
@@ -292,13 +475,15 @@ document.addEventListener('DOMContentLoaded', () => {
             per_page: '500'
         });
 
-        return fetchJson(endpoint).then((data) => {
+        return fetchJsonWithRetry(endpoint).then((data) => {
             const sets = data && data.photosets && data.photosets.photoset ? data.photosets.photoset : [];
-            albums = sets.map((set) => ({
+            albums = normalizeAlbumList(sets.map((set) => ({
                 id: set.id,
                 title: set.title && set.title._content ? set.title._content : 'Untitled album',
                 count: Number(set.photos || 0)
-            }));
+            })));
+
+            saveToCache(CACHE_ALBUMS_KEY, albums);
 
             return albums;
         });
@@ -315,8 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
             extras: 'url_z,url_c,url_l,width_z,height_z,width_c,height_c,width_l,height_l'
         });
 
-        return fetchJson(endpoint).then((data) => {
-            const photos = data && data.photoset && data.photoset.photo ? data.photoset.photo : [];
+        return fetchJsonWithRetry(endpoint).then((data) => {
+            const photos = normalizePhotoList(data && data.photoset && data.photoset.photo ? data.photoset.photo : []);
             albumPhotoCache.set(albumId, photos);
             return photos;
         });
@@ -332,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         renderAlbumRail();
-        setStatus('Loading album...');
+        showUiLoadingState('Loading album...');
 
         fetchAlbumPhotos(activeAlbumId)
             .then((photos) => {
@@ -340,8 +525,39 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch((error) => {
                 console.error(error);
-                setStatus('Could not load the selected album right now.', true);
+                showUiErrorState('Could not load the selected album right now.');
             });
+    }
+
+    function lightboxFocusableElements() {
+        return Array.from(lightboxEl.querySelectorAll('button:not([disabled])'));
+    }
+
+    function trapLightboxFocus(event) {
+        if (event.key !== 'Tab') {
+            return;
+        }
+
+        const focusables = lightboxFocusableElements();
+        if (!focusables.length) {
+            event.preventDefault();
+            return;
+        }
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+
+        if (event.shiftKey && active === first) {
+            event.preventDefault();
+            last.focus();
+            return;
+        }
+
+        if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
     }
 
     function updateLightbox() {
@@ -361,9 +577,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function openLightbox(index) {
         currentPhotoIndex = index;
         updateLightbox();
+        lightboxLastFocusedEl = document.activeElement;
         lightboxEl.classList.add('is-open');
         lightboxEl.setAttribute('aria-hidden', 'false');
         document.body.classList.add('no-scroll');
+        lightboxClose.focus();
         if (desktopHoverMedia.matches) {
             showLightboxArrows();
         }
@@ -378,6 +596,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lightboxControlsTimer) {
             window.clearTimeout(lightboxControlsTimer);
             lightboxControlsTimer = null;
+        }
+
+        if (lightboxLastFocusedEl && typeof lightboxLastFocusedEl.focus === 'function') {
+            lightboxLastFocusedEl.focus();
         }
     }
 
@@ -409,22 +631,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function fetchPhotos() {
-        setStatus('Loading photos...');
+        showUiLoadingState('Loading photos...');
 
         Promise.all([fetchPublicPhotos(), fetchAlbums()])
             .then(([photos]) => {
                 if (!photos.length) {
-                    setStatus('No public photos available yet.', true);
+                    setStatus('No public photos available yet.', false);
                     renderAlbumRail();
                     return;
                 }
 
                 renderAlbumRail();
                 setVisiblePhotos(photos);
+                clearStatus();
             })
             .catch((error) => {
                 console.error(error);
-                setStatus('Could not load Flickr photos right now. Please try again later.', true);
+
+                const cachedPhotos = readFromCache(CACHE_PUBLIC_PHOTOS_KEY);
+                const cachedAlbums = readFromCache(CACHE_ALBUMS_KEY);
+
+                const safeCachedPhotos = normalizePhotoList(cachedPhotos);
+                const safeCachedAlbums = normalizeAlbumList(cachedAlbums);
+
+                if (safeCachedPhotos.length) {
+                    publicPhotos = safeCachedPhotos;
+                    albumPhotoCache.set('all', safeCachedPhotos);
+
+                    if (safeCachedAlbums.length) {
+                        albums = safeCachedAlbums;
+                    }
+
+                    renderAlbumRail();
+                    setVisiblePhotos(safeCachedPhotos);
+                    setStatus('Live data is unavailable. Showing your last loaded gallery.', false);
+                    updateRetryButton(true);
+                    return;
+                }
+
+                showUiErrorState('Could not load Flickr photos right now. Please try again.');
             });
     }
 
@@ -434,6 +679,12 @@ document.addEventListener('DOMContentLoaded', () => {
             updateGalleryMeta();
             updateLoadMoreButton();
             renderGallery();
+        });
+    }
+
+    if (retryLoadBtn) {
+        retryLoadBtn.addEventListener('click', () => {
+            fetchPhotos();
         });
     }
 
@@ -472,10 +723,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    window.addEventListener('error', (event) => {
+        reportClientIssue({
+            type: 'error',
+            message: event.message,
+            file: event.filename,
+            line: event.lineno,
+            column: event.colno
+        });
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+        reportClientIssue({
+            type: 'unhandledrejection',
+            message: event.reason && event.reason.message ? event.reason.message : String(event.reason)
+        });
+    });
+
+    window.addEventListener('offline', () => {
+        setStatus('You appear to be offline. Some actions may fail until connection returns.', true);
+    });
+
+    window.addEventListener('online', () => {
+        setStatus('Connection restored.', false);
+    });
+
     document.addEventListener('keydown', (event) => {
         if (!lightboxEl.classList.contains('is-open')) {
             return;
         }
+
+        trapLightboxFocus(event);
 
         if (event.key === 'Escape') {
             closeLightbox();
