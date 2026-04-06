@@ -39,7 +39,7 @@ main {
     width: min(1200px, 100%);
     margin: 0 auto;
     padding: 0.5rem 0 1rem;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 2px solid var(--ink);
 }
 
 .wordmark {
