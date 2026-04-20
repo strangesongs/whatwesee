@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryMetaEl = document.getElementById('gallery-meta');
     const retryLoadBtn = document.getElementById('retry-load');
     const loadMoreBtn = document.getElementById('load-more');
+    const scrollTopBtn = document.getElementById('scroll-top');
 
     const lightboxEl = document.getElementById('lightbox');
     const lightboxImage = document.getElementById('lightbox-image');
@@ -33,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const desktopHoverMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
     let lightboxControlsTimer = null;
     let lightboxLastFocusedEl = null;
+    let initialSetBottomY = Number.POSITIVE_INFINITY;
 
     const FETCH_TIMEOUT_MS = 9000;
     const FETCH_MAX_RETRIES = 2;
@@ -273,15 +275,12 @@ document.addEventListener('DOMContentLoaded', () => {
         button.setAttribute('aria-label', photo.title || 'Open photo');
 
         const source = bestPhotoSource(photo);
-        button.style.aspectRatio = `${source.width} / ${source.height}`;
 
         const image = document.createElement('img');
         image.src = source.url;
         image.alt = photo.title || 'Flickr photo';
         image.loading = 'lazy';
         image.decoding = 'async';
-        image.width = source.width;
-        image.height = source.height;
 
         button.appendChild(image);
         button.addEventListener('click', () => openLightbox(index));
@@ -303,6 +302,41 @@ document.addEventListener('DOMContentLoaded', () => {
         renderedPhotos.forEach((photo, index) => {
             galleryEl.appendChild(photoCard(photo, index));
         });
+
+        updateInitialSetBoundary();
+        updateScrollTopVisibility();
+    }
+
+    function updateInitialSetBoundary() {
+        const cardNodes = galleryEl.querySelectorAll('.photo-card');
+        if (!cardNodes.length) {
+            initialSetBottomY = Number.POSITIVE_INFINITY;
+            return;
+        }
+
+        const initialSetSize = Math.min(PAGE_SIZE, cardNodes.length);
+        let furthestBottom = 0;
+
+        for (let i = 0; i < initialSetSize; i += 1) {
+            const card = cardNodes[i];
+            const cardBottom = card.offsetTop + card.offsetHeight;
+            if (cardBottom > furthestBottom) {
+                furthestBottom = cardBottom;
+            }
+        }
+
+        initialSetBottomY = galleryEl.offsetTop + furthestBottom;
+    }
+
+    function updateScrollTopVisibility() {
+        if (!scrollTopBtn) {
+            return;
+        }
+
+        const hasPassedInitialSet = Number.isFinite(initialSetBottomY)
+            && window.scrollY > initialSetBottomY;
+
+        scrollTopBtn.hidden = !hasPassedInitialSet;
     }
 
     function updateGalleryMeta() {
@@ -688,6 +722,12 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (scrollTopBtn) {
+        scrollTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
     lightboxClose.addEventListener('click', closeLightbox);
     lightboxPrev.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -746,6 +786,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('online', () => {
         setStatus('Connection restored.', false);
+    });
+
+    window.addEventListener('scroll', updateScrollTopVisibility, { passive: true });
+
+    window.addEventListener('resize', () => {
+        updateInitialSetBoundary();
+        updateScrollTopVisibility();
     });
 
     document.addEventListener('keydown', (event) => {

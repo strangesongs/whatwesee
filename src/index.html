@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://api.flickr.com" crossorigin>
     <link rel="preconnect" href="https://live.staticflickr.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/styles.css">
     <title>what we see is what we are</title>
 </head>
@@ -24,12 +24,11 @@
             <div id="album-rail" class="album-rail" aria-label="Album list"></div>
         </section>
 
-        <section>
+        <section id="gallery" aria-label="Photo gallery area">
             <div id="photo-gallery" class="photo-gallery" aria-label="Photo gallery"></div>
             <div class="gallery-footer" aria-live="polite">
                 <p id="gallery-meta" class="gallery-meta"></p>
                 <p id="status" class="status-message" aria-live="polite"></p>
-                <button id="retry-load" class="load-more" type="button" hidden>Try again</button>
                 <button id="load-more" class="load-more" type="button">Load more</button>
             </div>
         </section>
@@ -41,7 +40,7 @@
                 <p class="footer-role">artist and writer, los angeles, ca.</p>
             </div>
             <ul class="footer-links" aria-label="Contact links">
-                <li><a href="mailto:jcrtll@protonmail.com">email: jcrtll@protonmail.com</a></li>
+                <li><a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a></li>
                 <li><a href="https://strangesongs.github.io" target="_blank" rel="noopener noreferrer">strangesongs.github.io</a></li>
             </ul>
         </section>
@@ -61,6 +60,8 @@
             <span aria-hidden="true">&#8594;</span>
         </button>
     </div>
+
+    <button id="scroll-top" class="scroll-top" type="button" hidden>scroll to top</button>
 
     <script src="scripts/app.js"></script>
 </body>
