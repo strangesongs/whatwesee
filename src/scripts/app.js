@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const FETCH_TIMEOUT_MS = 9000;
     const FETCH_MAX_RETRIES = 2;
-    const CACHE_PUBLIC_PHOTOS_KEY = 'whatwesee.publicPhotos.v1';
+    const CACHE_PUBLIC_PHOTOS_KEY = 'whatwesee.publicPhotos.v2';
     const CACHE_ALBUMS_KEY = 'whatwesee.albums.v1';
     const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
     const ERROR_MONITOR_URL = '';
@@ -39,8 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'url_z,url_c,url_l,url_b,url_h,url_k,url_o',
         'width_z,height_z,width_c,height_c,width_l,height_l',
         'width_b,height_b,width_h,height_h,width_k,height_k,width_o,height_o',
-        'date_taken'
+        'originalsecret,original_format,date_taken'
     ].join(',');
+    let lightboxLoadToken = 0;
 
     parseLocationHash();
 
@@ -319,8 +320,144 @@ document.addEventListener('DOMContentLoaded', () => {
         return photoSourceFromKeys(photo, GALLERY_SIZE_KEYS) || fallbackPhotoSource(photo);
     }
 
-    function lightboxPhotoSource(photo) {
-        return photoSourceFromKeys(photo, PHOTO_SIZE_KEYS) || fallbackPhotoSource(photo);
+    function flickrSizedUrl(photo, sizeSuffix) {
+        return `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_${sizeSuffix}.jpg`;
+    }
+
+    function flickrOriginalUrl(photo) {
+        if (photo.url_o) {
+            return photo.url_o;
+        }
+
+        if (photo.originalsecret && photo.original_format) {
+            return `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.originalsecret}_o.${photo.original_format}`;
+        }
+
+        return null;
+    }
+
+    function lightboxPhotoCandidates(photo) {
+        const candidates = [];
+        const seen = new Set();
+
+        function add(url, width, height, verified) {
+            if (!url || seen.has(url)) {
+                return;
+            }
+
+            seen.add(url);
+            candidates.push({
+                url,
+                width: Number(width) || 0,
+                height: Number(height) || 0,
+                verified: Boolean(verified)
+            });
+        }
+
+        PHOTO_SIZE_KEYS.forEach(([urlKey, widthKey, heightKey]) => {
+            if (photo[urlKey] && photo[widthKey] && photo[heightKey]) {
+                add(photo[urlKey], photo[widthKey], photo[heightKey], true);
+            }
+        });
+
+        add(flickrOriginalUrl(photo), photo.width_o, photo.height_o, Boolean(photo.url_o || photo.originalsecret));
+        add(flickrSizedUrl(photo, 'k'), 2048, 0, false);
+        add(flickrSizedUrl(photo, 'h'), 1600, 0, false);
+        add(flickrSizedUrl(photo, 'b'), 1024, 0, false);
+        add(flickrSizedUrl(photo, 'z'), 640, 0, false);
+
+        return candidates;
+    }
+
+    function lightboxDisplayTarget() {
+        const dpr = window.devicePixelRatio || 1;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+
+        return {
+            width: Math.ceil(window.innerWidth * 0.96 * dpr),
+            height: Math.ceil(Math.max(viewportHeight - 48, 0) * dpr)
+        };
+    }
+
+    function pickLightboxCandidate(photo, candidates) {
+        if (!candidates.length) {
+            return fallbackPhotoSource(photo);
+        }
+
+        const target = lightboxDisplayTarget();
+        const verified = candidates.filter((candidate) => candidate.verified);
+        const pool = verified.length ? verified : candidates;
+        const sorted = pool.slice().sort((a, b) => b.width - a.width);
+        const adequate = sorted.find((candidate) => (
+            candidate.width >= target.width || candidate.height >= target.height
+        ));
+
+        return adequate || sorted[0];
+    }
+
+    function loadLightboxImage(photo) {
+        const token = ++lightboxLoadToken;
+        const candidates = lightboxPhotoCandidates(photo);
+        const preferred = pickLightboxCandidate(photo, candidates);
+        const fallbackOrder = [preferred];
+        const sortedDesc = candidates.slice().sort((a, b) => b.width - a.width);
+
+        sortedDesc.forEach((candidate) => {
+            if (candidate.url !== preferred.url) {
+                fallbackOrder.push(candidate);
+            }
+        });
+
+        let fallbackIndex = 0;
+
+        function tryUpgrade(remaining) {
+            if (token !== lightboxLoadToken || !remaining.length) {
+                return;
+            }
+
+            const candidate = remaining[0];
+            const rest = remaining.slice(1);
+            const probe = new Image();
+
+            probe.onload = () => {
+                if (token !== lightboxLoadToken) {
+                    return;
+                }
+
+                lightboxImage.src = candidate.url;
+                tryUpgrade(rest.filter((item) => item.width > candidate.width));
+            };
+
+            probe.onerror = () => {
+                if (token !== lightboxLoadToken) {
+                    return;
+                }
+
+                tryUpgrade(rest);
+            };
+
+            probe.src = candidate.url;
+        }
+
+        function showNextCandidate() {
+            if (token !== lightboxLoadToken || fallbackIndex >= fallbackOrder.length) {
+                return;
+            }
+
+            const candidate = fallbackOrder[fallbackIndex++];
+            lightboxImage.onload = () => {
+                if (token !== lightboxLoadToken) {
+                    return;
+                }
+
+                const upgrades = sortedDesc.filter((item) => item.width > candidate.width);
+                tryUpgrade(upgrades);
+            };
+            lightboxImage.onerror = showNextCandidate;
+            lightboxImage.src = candidate.url;
+        }
+
+        showNextCandidate();
     }
 
     function setStatus(message, isError) {
@@ -709,8 +846,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        lightboxImage.src = lightboxPhotoSource(photo).url;
         lightboxImage.alt = photo.title || 'Flickr photo';
+        loadLightboxImage(photo);
 
         lightboxPrev.disabled = currentPhotoIndex <= 0;
         lightboxNext.disabled = currentPhotoIndex >= renderedPhotos.length - 1;
