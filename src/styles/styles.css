@@ -167,6 +167,12 @@ button:focus-visible {
     color: #0000EE;
 }
 
+.footer-meta {
+    color: #666;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
 .no-scroll {
     overflow: hidden;
 }
@@ -208,6 +214,14 @@ button:focus-visible {
     color: #999;
     text-decoration: none;
     cursor: default;
+}
+
+.lightbox-flickr {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font: inherit;
+    color: #0000EE;
+    text-decoration: underline;
 }
 
 .lightbox-figure {

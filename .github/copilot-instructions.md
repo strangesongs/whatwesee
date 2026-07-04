@@ -4,26 +4,27 @@
 - Keep changes browser-ready with no build tooling assumptions.
 - Use vanilla JavaScript in `src/scripts/app.js`; do not introduce frameworks or bundler-specific syntax.
 - Prefer clear, small functions for UI behavior (rendering, modal behavior, pagination).
-- Keep CSS organization as-is: base framework in `src/styles/skeleton.css`, project overrides in `src/styles/styles.css`.
+- Keep CSS in `src/styles/styles.css` — a single minimal stylesheet, no framework.
 
 ## Architecture
-- This is a static Netlify site published from `src/`.
+- Static Netlify site published from `src/`.
+- Flickr API is called directly from the browser in `src/scripts/app.js`.
 - Entry pages:
   - `src/index.html`: photo gallery page.
-  - `src/about.html`: contact/about page.
+  - `src/about.html`: redirect to `index.html#contact`.
+  - `src/404.html`: not-found page.
 - Client behavior is centralized in `src/scripts/app.js`:
   - Flickr fetch and data loading.
   - Gallery rendering and pagination.
-  - Modal open/close and keyboard navigation.
+  - Hash-based album/photo deep links.
+  - Lightbox open/close and keyboard navigation.
 
 ## Build and Test
-- There is no build step (`netlify.toml` sets `command = ""`).
+- No build step (`netlify.toml` sets `command = ""`).
 - Publish directory is `src`.
-- No automated test suite is configured.
-- For local manual testing, serve `src/` with a static server (example: `npx http-server src`).
+- For local testing, serve `src/` with `npx http-server src`.
 
 ## Conventions
-- Preserve existing markup paths and relative links (`styles/styles.css`, `scripts/app.js`, `index.html`, `about.html`).
+- Preserve existing markup paths and relative links (`styles/styles.css`, `scripts/app.js`, `index.html`).
 - Follow the existing event model in `src/scripts/app.js`: initialize inside `DOMContentLoaded`, then attach listeners.
-- If touching Flickr integration, keep user-visible error handling in mind (current behavior logs to console only).
-- Do not hardcode additional secrets in client-side code; this project already contains a public API key in `src/scripts/app.js`, so avoid expanding that pattern.
+- Avoid adding new hardcoded secrets in client-side code when possible.

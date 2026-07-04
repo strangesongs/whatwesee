@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Photography by j cretella. what we see is what we are.">
+    <meta property="og:title" content="what we see is what we are">
+    <meta property="og:description" content="Photography by j cretella.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://live.staticflickr.com/65535/54241218541_f8130f44b1_z.jpg">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://api.flickr.com" crossorigin>
     <link rel="preconnect" href="https://live.staticflickr.com" crossorigin>
     <link rel="stylesheet" href="styles/styles.css">
@@ -33,7 +39,8 @@
 
         <footer id="contact" class="footer-contact" aria-label="Contact information">
             <p>j cretella — <a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a></p>
-            <p><a href="https://strangesongs.github.io" target="_blank" rel="noopener noreferrer">strangesongs.github.io</a></p>
+            <p><a href="https://www.flickr.com/photos/196014147@N05/" target="_blank" rel="noopener noreferrer">flickr</a> · <a href="https://strangesongs.github.io" target="_blank" rel="noopener noreferrer">strangesongs.github.io</a></p>
+            <p id="last-updated" class="footer-meta"></p>
         </footer>
     </main>
 
@@ -42,6 +49,7 @@
             <button id="lightbox-close" type="button">close</button>
             <button id="lightbox-prev" type="button">&larr; prev</button>
             <button id="lightbox-next" type="button">next &rarr;</button>
+            <a id="lightbox-flickr" class="lightbox-flickr" href="#" target="_blank" rel="noopener noreferrer">view on flickr</a>
         </div>
         <figure class="lightbox-figure">
             <img id="lightbox-image" src="" alt="">

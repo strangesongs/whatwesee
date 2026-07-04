@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     const apiKey = 'b78aa973eab5e39787fc5e2a08cdfaf5';
-    const userId = '196014147@N05';
+    const flickrUserId = '196014147@N05';
     const apiBase = 'https://api.flickr.com/services/rest/';
     const PAGE_SIZE = 24;
 
@@ -10,12 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryMetaEl = document.getElementById('gallery-meta');
     const retryLoadBtn = document.getElementById('retry-load');
     const loadMoreBtn = document.getElementById('load-more');
+    const lastUpdatedEl = document.getElementById('last-updated');
 
     const lightboxEl = document.getElementById('lightbox');
     const lightboxImage = document.getElementById('lightbox-image');
     const lightboxClose = document.getElementById('lightbox-close');
     const lightboxPrev = document.getElementById('lightbox-prev');
     const lightboxNext = document.getElementById('lightbox-next');
+    const lightboxFlickr = document.getElementById('lightbox-flickr');
 
     let visiblePhotos = [];
     let renderedCount = 0;
@@ -25,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const albumPhotoCache = new Map();
     let albums = [];
     let lightboxLastFocusedEl = null;
+    let pendingAlbumSlug = null;
+    let pendingPhotoId = null;
 
     const FETCH_TIMEOUT_MS = 9000;
     const FETCH_MAX_RETRIES = 2;
@@ -33,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
     const ERROR_MONITOR_URL = '';
     const PHOTO_EXTRAS = 'url_z,url_c,url_l,width_z,height_z,width_c,height_c,width_l,height_l,date_taken';
+
+    parseLocationHash();
 
     function clampText(text, maxLength) {
         const value = typeof text === 'string' ? text : String(text || '');
@@ -80,6 +86,72 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return parsed.toISOString().slice(0, 10);
+    }
+
+    function albumSlug(item) {
+        if (item.id === 'all') {
+            return 'all';
+        }
+
+        return item.title.toLowerCase().replace(/\s+/g, '-');
+    }
+
+    function findAlbumIdBySlug(slug) {
+        if (slug === 'all') {
+            return 'all';
+        }
+
+        const match = albums.find((album) => albumSlug(album) === slug);
+        return match ? match.id : null;
+    }
+
+    function parseLocationHash() {
+        const hash = window.location.hash.slice(1);
+        if (!hash) {
+            return;
+        }
+
+        const photoMatch = hash.match(/^photo\/(.+)$/);
+        if (photoMatch) {
+            pendingPhotoId = photoMatch[1];
+            return;
+        }
+
+        const albumMatch = hash.match(/^album\/(.+)$/);
+        if (albumMatch) {
+            pendingAlbumSlug = albumMatch[1];
+        }
+    }
+
+    function setLocationHash(nextHash) {
+        const target = nextHash ? `#${nextHash}` : '';
+        if (window.location.hash === target) {
+            return;
+        }
+
+        history.replaceState(null, '', `${window.location.pathname}${window.location.search}${target}`);
+    }
+
+    function updateAlbumHash() {
+        if (activeAlbumId === 'all') {
+            setLocationHash('album/all');
+            return;
+        }
+
+        const album = albums.find((item) => item.id === activeAlbumId);
+        if (album) {
+            setLocationHash(`album/${albumSlug(album)}`);
+        }
+    }
+
+    function updatePhotoHash(photo) {
+        if (photo && photo.id) {
+            setLocationHash(`photo/${photo.id}`);
+        }
+    }
+
+    function flickrPhotoUrl(photoId) {
+        return `https://www.flickr.com/photos/${encodeURIComponent(flickrUserId)}/${encodeURIComponent(photoId)}/`;
     }
 
     function reportClientIssue(payload) {
@@ -267,6 +339,29 @@ document.addEventListener('DOMContentLoaded', () => {
         return visiblePhotos.slice(0, renderedCount);
     }
 
+    function updateLastUpdated() {
+        if (!lastUpdatedEl || !publicPhotos.length) {
+            return;
+        }
+
+        let newest = null;
+
+        publicPhotos.forEach((photo) => {
+            const label = formatPhotoDate(photo);
+            if (!label) {
+                return;
+            }
+
+            if (!newest || label > newest) {
+                newest = label;
+            }
+        });
+
+        if (newest) {
+            lastUpdatedEl.textContent = `last updated: ${newest}`;
+        }
+    }
+
     function photoCard(photo, index) {
         const entry = document.createElement('div');
         entry.className = 'photo-entry';
@@ -344,19 +439,24 @@ document.addEventListener('DOMContentLoaded', () => {
         loadMoreBtn.textContent = 'load more';
     }
 
-    function setVisiblePhotos(photos) {
+    function setVisiblePhotos(photos, options) {
+        const opts = options || {};
         visiblePhotos = photos.slice();
         renderedCount = Math.min(PAGE_SIZE, visiblePhotos.length);
         updateGalleryMeta();
         updateLoadMoreButton();
         renderGallery();
+
+        if (opts.updateHash !== false && !pendingPhotoId) {
+            updateAlbumHash();
+        }
     }
 
     function buildFlickrUrl(method, params) {
         const query = new URLSearchParams({
             method,
             api_key: apiKey,
-            user_id: userId,
+            user_id: flickrUserId,
             format: 'json',
             nojsoncallback: '1',
             ...params
@@ -419,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             button.addEventListener('click', () => {
                 if (item.id !== activeAlbumId) {
+                    pendingPhotoId = null;
                     selectAlbum(item.id);
                 }
             });
@@ -438,6 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
             publicPhotos = photos;
             albumPhotoCache.set('all', photos);
             saveToCache(CACHE_PUBLIC_PHOTOS_KEY, photos);
+            updateLastUpdated();
             return photos;
         });
     }
@@ -479,14 +581,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function selectAlbum(albumId) {
+    function selectAlbum(albumId, options) {
+        const opts = options || {};
         activeAlbumId = albumId;
         renderAlbumNav();
-        showUiLoadingState('Loading album...');
 
-        fetchAlbumPhotos(activeAlbumId)
+        if (!opts.skipLoadingState) {
+            showUiLoadingState('Loading album...');
+        }
+
+        return fetchAlbumPhotos(activeAlbumId)
             .then((photos) => {
-                setVisiblePhotos(photos);
+                setVisiblePhotos(photos, { updateHash: !opts.skipHashUpdate });
                 clearStatus();
             })
             .catch((error) => {
@@ -495,8 +601,68 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    function ensurePhotoRendered(photoId) {
+        const index = visiblePhotos.findIndex((photo) => String(photo.id) === String(photoId));
+        if (index === -1) {
+            return -1;
+        }
+
+        if (index >= renderedCount) {
+            renderedCount = index + 1;
+            updateGalleryMeta();
+            updateLoadMoreButton();
+            renderGallery();
+        }
+
+        return currentRenderedPhotos().findIndex((photo) => String(photo.id) === String(photoId));
+    }
+
+    function openPhotoById(photoId) {
+        const renderedIndex = ensurePhotoRendered(photoId);
+        if (renderedIndex === -1) {
+            return false;
+        }
+
+        openLightbox(renderedIndex);
+        return true;
+    }
+
+    function applyPendingHashRoute() {
+        if (pendingAlbumSlug) {
+            const albumId = findAlbumIdBySlug(pendingAlbumSlug);
+            pendingAlbumSlug = null;
+
+            if (albumId && albumId !== activeAlbumId) {
+                return selectAlbum(albumId, { skipLoadingState: true, skipHashUpdate: true })
+                    .then(() => applyPendingPhotoHash());
+            }
+        }
+
+        return applyPendingPhotoHash();
+    }
+
+    function applyPendingPhotoHash() {
+        if (!pendingPhotoId) {
+            return Promise.resolve();
+        }
+
+        const photoId = pendingPhotoId;
+        pendingPhotoId = null;
+
+        if (openPhotoById(photoId)) {
+            return Promise.resolve();
+        }
+
+        setLocationHash('');
+        return Promise.resolve();
+    }
+
     function lightboxFocusableElements() {
-        return Array.from(lightboxEl.querySelectorAll('button:not([disabled])'));
+        const buttons = Array.from(lightboxEl.querySelectorAll('button:not([disabled])'));
+        if (lightboxFlickr) {
+            buttons.push(lightboxFlickr);
+        }
+        return buttons;
     }
 
     function trapLightboxFocus(event) {
@@ -538,6 +704,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         lightboxPrev.disabled = currentPhotoIndex <= 0;
         lightboxNext.disabled = currentPhotoIndex >= renderedPhotos.length - 1;
+
+        if (lightboxFlickr) {
+            lightboxFlickr.href = flickrPhotoUrl(photo.id);
+        }
+
+        updatePhotoHash(photo);
     }
 
     function openLightbox(index) {
@@ -555,6 +727,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lightboxEl.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('no-scroll');
         currentPhotoIndex = -1;
+        updateAlbumHash();
 
         if (lightboxLastFocusedEl && typeof lightboxLastFocusedEl.focus === 'function') {
             lightboxLastFocusedEl.focus();
@@ -580,12 +753,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!photos.length) {
                     setStatus('No public photos available yet.', false);
                     renderAlbumNav();
-                    return;
+                    return applyPendingHashRoute();
                 }
 
                 renderAlbumNav();
-                setVisiblePhotos(photos);
+                setVisiblePhotos(photos, { updateHash: !pendingAlbumSlug && !pendingPhotoId });
                 clearStatus();
+                return applyPendingHashRoute();
             })
             .catch((error) => {
                 console.error(error);
@@ -604,11 +778,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         albums = safeCachedAlbums;
                     }
 
+                    updateLastUpdated();
                     renderAlbumNav();
-                    setVisiblePhotos(safeCachedPhotos);
+                    setVisiblePhotos(safeCachedPhotos, { updateHash: !pendingAlbumSlug && !pendingPhotoId });
                     setStatus('Live data is unavailable. Showing your last loaded gallery.', false);
                     updateRetryButton(true);
-                    return;
+                    return applyPendingHashRoute();
                 }
 
                 showUiErrorState('Could not load Flickr photos right now. Please try again.');
