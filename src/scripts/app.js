@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const lightboxClose = document.getElementById('lightbox-close');
     const lightboxPrev = document.getElementById('lightbox-prev');
     const lightboxNext = document.getElementById('lightbox-next');
-    const lightboxFlickr = document.getElementById('lightbox-flickr');
 
     let visiblePhotos = [];
     let renderedCount = 0;
@@ -36,7 +35,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const CACHE_ALBUMS_KEY = 'whatwesee.albums.v1';
     const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
     const ERROR_MONITOR_URL = '';
-    const PHOTO_EXTRAS = 'url_z,url_c,url_l,width_z,height_z,width_c,height_c,width_l,height_l,date_taken';
+    const PHOTO_EXTRAS = [
+        'url_z,url_c,url_l,url_b,url_h,url_k,url_o',
+        'width_z,height_z,width_c,height_c,width_l,height_l',
+        'width_b,height_b,width_h,height_h,width_k,height_k,width_o,height_o',
+        'date_taken'
+    ].join(',');
 
     parseLocationHash();
 
@@ -150,9 +154,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function flickrPhotoUrl(photoId) {
-        return `https://www.flickr.com/photos/${encodeURIComponent(flickrUserId)}/${encodeURIComponent(photoId)}/`;
-    }
 
     function reportClientIssue(payload) {
         if (!ERROR_MONITOR_URL) {
@@ -277,36 +278,49 @@ document.addEventListener('DOMContentLoaded', () => {
         retryLoadBtn.hidden = !show;
     }
 
-    function bestPhotoSource(photo) {
-        if (photo.url_l && photo.width_l && photo.height_l) {
-            return {
-                url: photo.url_l,
-                width: Number(photo.width_l),
-                height: Number(photo.height_l)
-            };
+    const PHOTO_SIZE_KEYS = [
+        ['url_o', 'width_o', 'height_o'],
+        ['url_k', 'width_k', 'height_k'],
+        ['url_h', 'width_h', 'height_h'],
+        ['url_b', 'width_b', 'height_b'],
+        ['url_l', 'width_l', 'height_l'],
+        ['url_c', 'width_c', 'height_c'],
+        ['url_z', 'width_z', 'height_z']
+    ];
+
+    const GALLERY_SIZE_KEYS = [
+        ['url_c', 'width_c', 'height_c'],
+        ['url_z', 'width_z', 'height_z']
+    ];
+
+    function photoSourceFromKeys(photo, sizeKeys) {
+        for (const [urlKey, widthKey, heightKey] of sizeKeys) {
+            if (photo[urlKey] && photo[widthKey] && photo[heightKey]) {
+                return {
+                    url: photo[urlKey],
+                    width: Number(photo[widthKey]),
+                    height: Number(photo[heightKey])
+                };
+            }
         }
 
-        if (photo.url_c && photo.width_c && photo.height_c) {
-            return {
-                url: photo.url_c,
-                width: Number(photo.width_c),
-                height: Number(photo.height_c)
-            };
-        }
+        return null;
+    }
 
-        if (photo.url_z && photo.width_z && photo.height_z) {
-            return {
-                url: photo.url_z,
-                width: Number(photo.width_z),
-                height: Number(photo.height_z)
-            };
-        }
-
+    function fallbackPhotoSource(photo) {
         return {
             url: `https://live.staticflickr.com/${photo.server}/${photo.id}_${photo.secret}_z.jpg`,
             width: 4,
             height: 5
         };
+    }
+
+    function galleryPhotoSource(photo) {
+        return photoSourceFromKeys(photo, GALLERY_SIZE_KEYS) || fallbackPhotoSource(photo);
+    }
+
+    function lightboxPhotoSource(photo) {
+        return photoSourceFromKeys(photo, PHOTO_SIZE_KEYS) || fallbackPhotoSource(photo);
     }
 
     function setStatus(message, isError) {
@@ -371,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.className = 'photo-card';
         button.setAttribute('aria-label', photo.title || 'Open photo');
 
-        const source = bestPhotoSource(photo);
+        const source = galleryPhotoSource(photo);
 
         const image = document.createElement('img');
         image.src = source.url;
@@ -658,11 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function lightboxFocusableElements() {
-        const buttons = Array.from(lightboxEl.querySelectorAll('button:not([disabled])'));
-        if (lightboxFlickr) {
-            buttons.push(lightboxFlickr);
-        }
-        return buttons;
+        return Array.from(lightboxEl.querySelectorAll('button:not([disabled])'));
     }
 
     function trapLightboxFocus(event) {
@@ -699,15 +709,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        lightboxImage.src = bestPhotoSource(photo).url;
+        lightboxImage.src = lightboxPhotoSource(photo).url;
         lightboxImage.alt = photo.title || 'Flickr photo';
 
         lightboxPrev.disabled = currentPhotoIndex <= 0;
         lightboxNext.disabled = currentPhotoIndex >= renderedPhotos.length - 1;
-
-        if (lightboxFlickr) {
-            lightboxFlickr.href = flickrPhotoUrl(photo.id);
-        }
 
         updatePhotoHash(photo);
     }
