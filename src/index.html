@@ -3,65 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://api.flickr.com" crossorigin>
     <link rel="preconnect" href="https://live.staticflickr.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles/styles.css">
     <title>what we see is what we are</title>
 </head>
 <body>
     <noscript>
-        <p class="status-message is-error" style="margin: 1rem auto; max-width: 1200px;">This gallery needs JavaScript enabled to load Flickr photos.</p>
+        <p class="status-message is-error">This gallery needs JavaScript enabled to load Flickr photos.</p>
     </noscript>
+
     <header class="site-header">
-        <div class="wordmark">what we see is what we are</div>
+        <h1 class="wordmark">what we see is what we are</h1>
     </header>
+    <hr class="site-rule">
 
     <main>
-        <section class="controls" aria-label="Album controls">
-            <div id="album-rail" class="album-rail" aria-label="Album list"></div>
-        </section>
+        <nav id="album-nav" class="album-nav" aria-label="Album list"></nav>
 
         <section id="gallery" aria-label="Photo gallery area">
+            <p id="gallery-meta" class="gallery-meta"></p>
+            <p id="status" class="status-message" aria-live="polite"></p>
             <div id="photo-gallery" class="photo-gallery" aria-label="Photo gallery"></div>
-            <div class="gallery-footer" aria-live="polite">
-                <p id="gallery-meta" class="gallery-meta"></p>
-                <p id="status" class="status-message" aria-live="polite"></p>
-                <button id="load-more" class="load-more" type="button">Load more</button>
+            <div class="gallery-footer">
+                <button id="load-more" class="load-more" type="button" hidden>load more</button>
+                <button id="retry-load" class="retry-load" type="button" hidden>retry</button>
             </div>
         </section>
 
-        <section id="contact" class="footer-contact" aria-label="Contact information">
-            <div class="footer-identity">
-                <p class="footer-label">contact</p>
-                <p class="footer-name">j cretella</p>
-                <p class="footer-role">artist and writer, los angeles, ca.</p>
-            </div>
-            <ul class="footer-links" aria-label="Contact links">
-                <li><a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a></li>
-                <li><a href="https://strangesongs.github.io" target="_blank" rel="noopener noreferrer">strangesongs.github.io</a></li>
-            </ul>
-        </section>
+        <footer id="contact" class="footer-contact" aria-label="Contact information">
+            <p>j cretella — <a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a></p>
+            <p><a href="https://strangesongs.github.io" target="_blank" rel="noopener noreferrer">strangesongs.github.io</a></p>
+        </footer>
     </main>
 
     <div id="lightbox" class="lightbox" aria-hidden="true" role="dialog" aria-modal="true" tabindex="-1" aria-label="Photo viewer">
-        <button class="lightbox-close" id="lightbox-close" type="button" aria-label="Close viewer">
-            <span aria-hidden="true">&#10005;</span>
-        </button>
-        <button class="lightbox-prev" id="lightbox-prev" type="button" aria-label="Previous photo">
-            <span aria-hidden="true">&#8592;</span>
-        </button>
+        <div class="lightbox-nav">
+            <button id="lightbox-close" type="button">close</button>
+            <button id="lightbox-prev" type="button">&larr; prev</button>
+            <button id="lightbox-next" type="button">next &rarr;</button>
+        </div>
         <figure class="lightbox-figure">
             <img id="lightbox-image" src="" alt="">
         </figure>
-        <button class="lightbox-next" id="lightbox-next" type="button" aria-label="Next photo">
-            <span aria-hidden="true">&#8594;</span>
-        </button>
     </div>
-
-    <button id="scroll-top" class="scroll-top" type="button" hidden>scroll to top</button>
 
     <script src="scripts/app.js"></script>
 </body>

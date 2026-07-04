@@ -6,11 +6,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const galleryEl = document.getElementById('photo-gallery');
     const statusEl = document.getElementById('status');
-    const albumRail = document.getElementById('album-rail');
+    const albumNav = document.getElementById('album-nav');
     const galleryMetaEl = document.getElementById('gallery-meta');
     const retryLoadBtn = document.getElementById('retry-load');
     const loadMoreBtn = document.getElementById('load-more');
-    const scrollTopBtn = document.getElementById('scroll-top');
 
     const lightboxEl = document.getElementById('lightbox');
     const lightboxImage = document.getElementById('lightbox-image');
@@ -21,20 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let visiblePhotos = [];
     let renderedCount = 0;
     let activeAlbumId = 'all';
-    let activeAlbumLabel = 'All photos';
     let currentPhotoIndex = -1;
     let publicPhotos = [];
     const albumPhotoCache = new Map();
     let albums = [];
-    let isRailPointerDown = false;
-    let isRailDragging = false;
-    let railStartX = 0;
-    let railStartScrollLeft = 0;
-    let suppressRailClick = false;
-    const desktopHoverMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
-    let lightboxControlsTimer = null;
     let lightboxLastFocusedEl = null;
-    let initialSetBottomY = Number.POSITIVE_INFINITY;
 
     const FETCH_TIMEOUT_MS = 9000;
     const FETCH_MAX_RETRIES = 2;
@@ -42,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const CACHE_ALBUMS_KEY = 'whatwesee.albums.v1';
     const CACHE_TTL_MS = 1000 * 60 * 60 * 24;
     const ERROR_MONITOR_URL = '';
+    const PHOTO_EXTRAS = 'url_z,url_c,url_l,width_z,height_z,width_c,height_c,width_l,height_l,date_taken';
 
     function clampText(text, maxLength) {
         const value = typeof text === 'string' ? text : String(text || '');
@@ -76,6 +67,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 title: item.title ? String(item.title) : 'Untitled album',
                 count: Number(item.count || 0)
             }));
+    }
+
+    function formatPhotoDate(photo) {
+        if (!photo || !photo.date_taken) {
+            return '';
+        }
+
+        const parsed = new Date(photo.date_taken);
+        if (Number.isNaN(parsed.getTime())) {
+            return photo.date_taken.split(' ')[0] || '';
+        }
+
+        return parsed.toISOString().slice(0, 10);
     }
 
     function reportClientIssue(payload) {
@@ -174,7 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const parsed = JSON.parse(rawValue);
 
             if (Array.isArray(parsed)) {
-                // Backward compatibility with older cache format.
                 return parsed;
             }
 
@@ -235,10 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setStatus(message, isError) {
-        if (galleryMetaEl) {
-            galleryMetaEl.textContent = message;
-        }
-
         if (!statusEl) {
             if (isError) {
                 console.error(message);
@@ -269,6 +268,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function photoCard(photo, index) {
+        const entry = document.createElement('div');
+        entry.className = 'photo-entry';
+
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'photo-card';
@@ -284,7 +286,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         button.appendChild(image);
         button.addEventListener('click', () => openLightbox(index));
-        return button;
+        entry.appendChild(button);
+
+        const dateLabel = formatPhotoDate(photo);
+        if (dateLabel) {
+            const caption = document.createElement('p');
+            caption.className = 'photo-caption';
+            caption.textContent = dateLabel;
+            entry.appendChild(caption);
+        }
+
+        return entry;
     }
 
     function renderGallery() {
@@ -302,41 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
         renderedPhotos.forEach((photo, index) => {
             galleryEl.appendChild(photoCard(photo, index));
         });
-
-        updateInitialSetBoundary();
-        updateScrollTopVisibility();
-    }
-
-    function updateInitialSetBoundary() {
-        const cardNodes = galleryEl.querySelectorAll('.photo-card');
-        if (!cardNodes.length) {
-            initialSetBottomY = Number.POSITIVE_INFINITY;
-            return;
-        }
-
-        const initialSetSize = Math.min(PAGE_SIZE, cardNodes.length);
-        let furthestBottom = 0;
-
-        for (let i = 0; i < initialSetSize; i += 1) {
-            const card = cardNodes[i];
-            const cardBottom = card.offsetTop + card.offsetHeight;
-            if (cardBottom > furthestBottom) {
-                furthestBottom = cardBottom;
-            }
-        }
-
-        initialSetBottomY = galleryEl.offsetTop + furthestBottom;
-    }
-
-    function updateScrollTopVisibility() {
-        if (!scrollTopBtn) {
-            return;
-        }
-
-        const hasPassedInitialSet = Number.isFinite(initialSetBottomY)
-            && window.scrollY > initialSetBottomY;
-
-        scrollTopBtn.hidden = !hasPassedInitialSet;
     }
 
     function updateGalleryMeta() {
@@ -345,11 +322,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!visiblePhotos.length) {
-            galleryMetaEl.textContent = `0 photos in ${activeAlbumLabel}`;
+            galleryMetaEl.textContent = '0 photos';
             return;
         }
 
-        galleryMetaEl.textContent = `Showing ${Math.min(renderedCount, visiblePhotos.length)} of ${visiblePhotos.length} in ${activeAlbumLabel}`;
+        galleryMetaEl.textContent = `showing ${Math.min(renderedCount, visiblePhotos.length)} of ${visiblePhotos.length}`;
     }
 
     function updateLoadMoreButton() {
@@ -364,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         loadMoreBtn.hidden = false;
-        loadMoreBtn.textContent = `Load ${Math.min(PAGE_SIZE, remaining)} more`;
+        loadMoreBtn.textContent = 'load more';
     }
 
     function setVisiblePhotos(photos) {
@@ -397,8 +374,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderAlbumRail() {
-        albumRail.innerHTML = '';
+    function albumLinkLabel(item) {
+        if (item.id === 'all') {
+            return 'all';
+        }
+
+        return item.title.toLowerCase();
+    }
+
+    function renderAlbumNav() {
+        if (!albumNav) {
+            return;
+        }
+
+        albumNav.innerHTML = '';
 
         const allItem = {
             id: 'all',
@@ -408,91 +397,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const items = [allItem].concat(albums);
 
-        items.forEach((item) => {
+        items.forEach((item, index) => {
+            if (index > 0) {
+                const sep = document.createElement('span');
+                sep.className = 'album-sep';
+                sep.setAttribute('aria-hidden', 'true');
+                sep.textContent = '|';
+                albumNav.appendChild(sep);
+            }
+
             const button = document.createElement('button');
             button.type = 'button';
-            button.className = 'album-pill';
-            button.textContent = `${item.title} (${item.count})`;
+            button.className = 'album-link';
+            button.textContent = albumLinkLabel(item);
             button.setAttribute('data-album-id', item.id);
 
             if (item.id === activeAlbumId) {
                 button.classList.add('is-active');
+                button.setAttribute('aria-current', 'true');
             }
 
-            albumRail.appendChild(button);
-        });
+            button.addEventListener('click', () => {
+                if (item.id !== activeAlbumId) {
+                    selectAlbum(item.id);
+                }
+            });
 
-        const activePill = albumRail.querySelector('.album-pill.is-active');
-        if (activePill) {
-            activePill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-        }
-    }
-
-    function setupAlbumRailDrag() {
-        albumRail.addEventListener('pointerdown', (event) => {
-            if (event.pointerType !== 'mouse' || event.button !== 0) {
-                return;
-            }
-
-            isRailPointerDown = true;
-            isRailDragging = false;
-            railStartX = event.clientX;
-            railStartScrollLeft = albumRail.scrollLeft;
-            suppressRailClick = false;
-        });
-
-        albumRail.addEventListener('pointermove', (event) => {
-            if (!isRailPointerDown) {
-                return;
-            }
-
-            const deltaX = event.clientX - railStartX;
-            if (Math.abs(deltaX) > 6) {
-                isRailDragging = true;
-                suppressRailClick = true;
-                albumRail.classList.add('is-dragging');
-                albumRail.scrollLeft = railStartScrollLeft - deltaX;
-            }
-        });
-
-        function stopRailDrag() {
-            isRailPointerDown = false;
-            isRailDragging = false;
-            albumRail.classList.remove('is-dragging');
-        }
-
-        albumRail.addEventListener('pointerup', stopRailDrag);
-        albumRail.addEventListener('pointercancel', stopRailDrag);
-        albumRail.addEventListener('pointerleave', () => {
-            if (isRailDragging) {
-                stopRailDrag();
-            }
-        });
-
-        albumRail.addEventListener('click', (event) => {
-            if (suppressRailClick) {
-                event.preventDefault();
-                event.stopPropagation();
-                suppressRailClick = false;
-                return;
-            }
-
-            const pill = event.target.closest('.album-pill');
-            if (!pill) {
-                return;
-            }
-
-            const nextAlbumId = pill.getAttribute('data-album-id');
-            if (nextAlbumId && nextAlbumId !== activeAlbumId) {
-                selectAlbum(nextAlbumId);
-            }
+            albumNav.appendChild(button);
         });
     }
 
     function fetchPublicPhotos() {
         const endpoint = buildFlickrUrl('flickr.people.getPublicPhotos', {
             per_page: '500',
-            extras: 'url_z,url_c,url_l,width_z,height_z,width_c,height_c,width_l,height_l'
+            extras: PHOTO_EXTRAS
         });
 
         return fetchJsonWithRetry(endpoint).then((data) => {
@@ -531,7 +469,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const endpoint = buildFlickrUrl('flickr.photosets.getPhotos', {
             photoset_id: albumId,
             per_page: '500',
-            extras: 'url_z,url_c,url_l,width_z,height_z,width_c,height_c,width_l,height_l'
+            extras: PHOTO_EXTRAS
         });
 
         return fetchJsonWithRetry(endpoint).then((data) => {
@@ -543,19 +481,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function selectAlbum(albumId) {
         activeAlbumId = albumId;
-        if (albumId === 'all') {
-            activeAlbumLabel = 'All photos';
-        } else {
-            const match = albums.find((album) => album.id === albumId);
-            activeAlbumLabel = match ? match.title : 'Album';
-        }
-
-        renderAlbumRail();
+        renderAlbumNav();
         showUiLoadingState('Loading album...');
 
         fetchAlbumPhotos(activeAlbumId)
             .then((photos) => {
                 setVisiblePhotos(photos);
+                clearStatus();
             })
             .catch((error) => {
                 console.error(error);
@@ -616,21 +548,13 @@ document.addEventListener('DOMContentLoaded', () => {
         lightboxEl.setAttribute('aria-hidden', 'false');
         document.body.classList.add('no-scroll');
         lightboxClose.focus();
-        if (desktopHoverMedia.matches) {
-            showLightboxArrows();
-        }
     }
 
     function closeLightbox() {
         lightboxEl.classList.remove('is-open');
-        lightboxEl.classList.remove('show-lightbox-arrows');
         lightboxEl.setAttribute('aria-hidden', 'true');
         document.body.classList.remove('no-scroll');
         currentPhotoIndex = -1;
-        if (lightboxControlsTimer) {
-            window.clearTimeout(lightboxControlsTimer);
-            lightboxControlsTimer = null;
-        }
 
         if (lightboxLastFocusedEl && typeof lightboxLastFocusedEl.focus === 'function') {
             lightboxLastFocusedEl.focus();
@@ -648,22 +572,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLightbox();
     }
 
-    function showLightboxArrows() {
-        if (!desktopHoverMedia.matches || !lightboxEl.classList.contains('is-open')) {
-            return;
-        }
-
-        lightboxEl.classList.add('show-lightbox-arrows');
-
-        if (lightboxControlsTimer) {
-            window.clearTimeout(lightboxControlsTimer);
-        }
-
-        lightboxControlsTimer = window.setTimeout(() => {
-            lightboxEl.classList.remove('show-lightbox-arrows');
-        }, 1100);
-    }
-
     function fetchPhotos() {
         showUiLoadingState('Loading photos...');
 
@@ -671,11 +579,11 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(([photos]) => {
                 if (!photos.length) {
                     setStatus('No public photos available yet.', false);
-                    renderAlbumRail();
+                    renderAlbumNav();
                     return;
                 }
 
-                renderAlbumRail();
+                renderAlbumNav();
                 setVisiblePhotos(photos);
                 clearStatus();
             })
@@ -696,7 +604,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         albums = safeCachedAlbums;
                     }
 
-                    renderAlbumRail();
+                    renderAlbumNav();
                     setVisiblePhotos(safeCachedPhotos);
                     setStatus('Live data is unavailable. Showing your last loaded gallery.', false);
                     updateRetryButton(true);
@@ -722,12 +630,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (scrollTopBtn) {
-        scrollTopBtn.addEventListener('click', () => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        });
-    }
-
     lightboxClose.addEventListener('click', closeLightbox);
     lightboxPrev.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -740,26 +642,6 @@ document.addEventListener('DOMContentLoaded', () => {
     lightboxEl.addEventListener('click', (event) => {
         if (event.target === lightboxEl) {
             closeLightbox();
-        }
-    });
-
-    lightboxEl.addEventListener('mousemove', () => {
-        showLightboxArrows();
-    });
-
-    lightboxEl.addEventListener('focusin', () => {
-        if (desktopHoverMedia.matches) {
-            lightboxEl.classList.add('show-lightbox-arrows');
-        }
-    });
-
-    desktopHoverMedia.addEventListener('change', (event) => {
-        if (!event.matches) {
-            lightboxEl.classList.remove('show-lightbox-arrows');
-            if (lightboxControlsTimer) {
-                window.clearTimeout(lightboxControlsTimer);
-                lightboxControlsTimer = null;
-            }
         }
     });
 
@@ -788,13 +670,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('Connection restored.', false);
     });
 
-    window.addEventListener('scroll', updateScrollTopVisibility, { passive: true });
-
-    window.addEventListener('resize', () => {
-        updateInitialSetBoundary();
-        updateScrollTopVisibility();
-    });
-
     document.addEventListener('keydown', (event) => {
         if (!lightboxEl.classList.contains('is-open')) {
             return;
@@ -817,6 +692,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    setupAlbumRailDrag();
     fetchPhotos();
 });

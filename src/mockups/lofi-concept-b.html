@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mockup B — Directory Listing</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            max-width: 640px;
+            margin: 1.5rem auto 3rem;
+            padding: 0 1rem;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #000;
+            background: #fafafa;
+        }
+        .label { font-family: Georgia, serif; font-size: 0.75rem; color: #666; margin-bottom: 1.5rem; }
+        h1 { font-size: 1rem; font-weight: normal; margin-bottom: 0.5rem; }
+        nav { margin: 0.5rem 0 1rem; }
+        nav a { color: #0000EE; text-decoration: none; display: block; }
+        nav a:hover { text-decoration: underline; }
+        hr { border: none; border-top: 1px dashed #999; margin: 1rem 0; }
+        .entry { display: flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0; border-bottom: 1px dashed #ccc; }
+        .entry img { width: 48px; height: 36px; background: #ccc; flex-shrink: 0; }
+        .entry .name { flex: 1; }
+        .entry .dims { color: #666; }
+        footer { margin-top: 1.5rem; }
+        footer a { color: #0000EE; }
+    </style>
+</head>
+<body>
+    <p class="label">Concept B — Directory Listing</p>
+
+    <h1>whatwesee/</h1>
+
+    <nav aria-label="Albums">
+        <a href="#">./all (142)</a>
+        <a href="#">./albums/travel (38)</a>
+        <a href="#">./albums/portraits (21)</a>
+        <a href="#">./albums/street (15)</a>
+    </nav>
+
+    <hr>
+
+    <div class="entry">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='36'%3E%3Crect fill='%23bbb' width='48' height='36'/%3E%3C/svg%3E" alt="">
+        <span class="name">IMG_4821.jpg</span>
+        <span class="dims">800×600</span>
+    </div>
+    <div class="entry">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='36'%3E%3Crect fill='%23aaa' width='48' height='36'/%3E%3C/svg%3E" alt="">
+        <span class="name">DSC_0093.jpg</span>
+        <span class="dims">1200×800</span>
+    </div>
+    <div class="entry">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='36'%3E%3Crect fill='%23999' width='48' height='36'/%3E%3C/svg%3E" alt="">
+        <span class="name">P1040023.jpg</span>
+        <span class="dims">640×480</span>
+    </div>
+
+    <p style="margin-top: 1rem;"><a href="#">load more</a></p>
+
+    <footer>
+        <p>contact: <a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a> | <a href="https://strangesongs.github.io">strangesongs.github.io</a></p>
+    </footer>
+</body>
+</html>
