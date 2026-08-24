@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Concept C — Combined: 2px Rule + Fraunces Nameplate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: #f0f0f0;
+    padding: 2.5rem;
+    color: #111;
+  }
+
+  .concept-header {
+    max-width: 1060px;
+    margin: 0 auto 2rem;
+  }
+
+  .concept-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 0.4rem;
+  }
+
+  .concept-title {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  .concept-desc {
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.6;
+    max-width: 660px;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 1060px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .panel {
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+  }
+
+  .panel-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 0.55rem 1rem;
+    background: #e8e8e8;
+    color: #555;
+    border-bottom: 1px solid #ddd;
+  }
+
+  /* ─── strangesongs panel ─── */
+  .ss-panel {
+    color: #4a148c;
+    display: flex;
+    min-height: 340px;
+  }
+
+  .ss-sidebar {
+    width: 180px;
+    flex-shrink: 0;
+    background: #f5f3ff;
+    /* Structural signature: 2px solid (already exists — no change) */
+    border-right: 2px solid #4a148c;
+    padding: 28px 20px;
+  }
+
+  /* Nameplate: Fraunces (proposed change) */
+  .ss-h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 28px;
+    color: #4a148c;
+  }
+
+  .ss-h1 a { color: inherit; text-decoration: none; }
+
+  .ss-nav {
+    list-style: none;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 15px;
+  }
+
+  .ss-nav li { margin-bottom: 8px; }
+
+  .ss-nav a {
+    color: #6a1b9a;
+    text-decoration: none;
+  }
+
+  .ss-nav .photo-link { font-style: italic; }
+
+  .ss-content {
+    flex: 1;
+    padding: 28px 24px;
+    background: #f5f3ff;
+    font-family: 'Times New Roman', Times, serif;
+  }
+
+  .ss-recent-label {
+    font-size: 15px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #6a1b9a;
+  }
+
+  .ss-list {
+    list-style: none;
+    font-size: 14px;
+    line-height: 2.1;
+    color: #4a148c;
+  }
+
+  .ss-list li::before { content: "— "; opacity: 0.4; }
+
+  .ss-contact {
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid rgba(74,20,140,0.2);
+    font-size: 12px;
+    color: #9c74c0;
+    font-style: italic;
+  }
+
+  /* ─── whatwesee panel ─── */
+  .ww-panel {
+    background: linear-gradient(145deg, #f9fbfa 0%, #eef1ef 60%, #dfe5e1 100%);
+    font-family: 'Space Grotesk', sans-serif;
+    color: #101514;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ww-header {
+    padding: 14px 20px 12px;
+    /* Structural signature: 2px solid (proposed change from 1px rgba) */
+    border-bottom: 2px solid #101514;
+  }
+
+  /* Nameplate: Fraunces (already exists — no change) */
+  .ww-wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    letter-spacing: -0.025em;
+  }
+
+  .ww-rail {
+    display: flex;
+    gap: 6px;
+    padding: 10px 20px;
+    overflow: hidden;
+  }
+
+  .ww-pill {
+    border: 1px solid rgba(16,21,20,0.1);
+    background: rgba(255,255,255,0.56);
+    color: #58615d;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+
+  .ww-pill.active {
+    border-color: rgba(62,98,87,0.34);
+    background: rgba(62,98,87,0.06);
+    color: #101514;
+    font-weight: 500;
+  }
+
+  .ww-gallery {
+    padding: 12px 20px;
+    column-count: 3;
+    column-gap: 8px;
+    flex: 1;
+  }
+
+  .ww-photo {
+    background: rgba(16,21,20,0.08);
+    border: 1px solid rgba(16,21,20,0.13);
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+
+  .ww-photo.tall { height: 90px; }
+  .ww-photo.short { height: 60px; }
+  .ww-photo.med { height: 72px; }
+
+  .ww-footer {
+    padding: 16px 20px;
+    /* Structural signature: matching 2px at the base */
+    border-top: 2px solid rgba(16,21,20,0.18);
+    font-size: 0.78rem;
+    color: #58615d;
+    margin-top: auto;
+  }
+
+  .ww-footer strong {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 0.88rem;
+    color: #101514;
+    display: block;
+    margin-bottom: 3px;
+  }
+
+  /* ─── annotation overlay ─── */
+  .annotation-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 1060px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .annotation-card {
+    background: white;
+    border-radius: 6px;
+    padding: 1.1rem 1.4rem;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+    font-size: 0.87rem;
+    line-height: 1.6;
+    color: #333;
+  }
+
+  .annotation-card h3 {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 0.5rem;
+  }
+
+  .change-item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .dot-new {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .dot-keep {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #10b981;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  .dot-legend {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.8rem;
+    font-size: 0.75rem;
+    color: #888;
+  }
+
+  .dot-legend span { display: flex; align-items: center; gap: 0.3rem; }
+  .dot-legend .d { width: 7px; height: 7px; border-radius: 50%; }
+  .dot-legend .d.new { background: #f59e0b; }
+  .dot-legend .d.keep { background: #10b981; }
+
+  /* ─── callout ─── */
+  .callout {
+    max-width: 1060px;
+    margin: 0 auto;
+    background: white;
+    border-left: 4px solid #333;
+    padding: 1rem 1.4rem;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: #333;
+  }
+
+  .callout strong {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .change-tag {
+    display: inline-block;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    margin-left: 4px;
+    vertical-align: middle;
+    letter-spacing: 0.04em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1rem;
+    max-width: 1060px;
+    margin: 2rem auto 0;
+    font-size: 0.88rem;
+  }
+
+  .nav-links a {
+    color: #555;
+    text-decoration: none;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .nav-links a:hover { color: #111; border-color: #111; }
+</style>
+</head>
+<body>
+
+<div class="concept-header">
+  <div class="concept-label">Concept C of 3</div>
+  <h1 class="concept-title">Both Together: Rule + Fraunces</h1>
+  <p class="concept-desc">
+    Combines A and B. The <strong>2px border</strong> becomes a shared structural weight across both sites
+    (vertical on strangesongs, horizontal on whatwesee), and <strong>Fraunces</strong> is the shared
+    nameplate font for both site names. Two small changes to strangesongs; one small change to whatwesee's
+    header. Everything else — palette, layout, body type — remains completely site-specific.
+    The result feels like a family of publications from the same author.
+  </p>
+</div>
+
+<div class="comparison">
+
+  <!-- strangesongs panel: both changes applied -->
+  <div class="panel">
+    <div class="panel-label">strangesongs — 2 changes: Fraunces h1, border already 2px</div>
+    <div class="ss-panel">
+      <div class="ss-sidebar">
+        <div class="ss-h1"><a href="#">cleve</a></div>
+        <ul class="ss-nav">
+          <li><a href="#">read watch listen</a></li>
+          <li><a href="#">writing</a></li>
+          <li><a href="#" class="photo-link">photography ↗</a></li>
+          <li><a href="#">about</a></li>
+        </ul>
+        <div class="ss-contact">cleve@strangesongs.com</div>
+      </div>
+      <div class="ss-content">
+        <div class="ss-recent-label">recent</div>
+        <ul class="ss-list">
+          <li>A Novel of Letters</li>
+          <li>Conclave</li>
+          <li>The Brutalist</li>
+          <li>Sinners</li>
+          <li>Severance S2</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- whatwesee panel: both changes applied -->
+  <div class="panel">
+    <div class="panel-label">whatwesee — 1 change: header border 1px rgba → 2px solid</div>
+    <div class="ww-panel">
+      <div class="ww-header">
+        <div class="ww-wordmark">what we see is what we are</div>
+      </div>
+      <div class="ww-rail">
+        <span class="ww-pill active">All photos</span>
+        <span class="ww-pill">Iceland</span>
+        <span class="ww-pill">New York</span>
+        <span class="ww-pill">Film</span>
+      </div>
+      <div class="ww-gallery">
+        <div class="ww-photo tall"></div>
+        <div class="ww-photo short"></div>
+        <div class="ww-photo med"></div>
+        <div class="ww-photo med"></div>
+        <div class="ww-photo tall"></div>
+        <div class="ww-photo short"></div>
+        <div class="ww-photo short"></div>
+        <div class="ww-photo med"></div>
+        <div class="ww-photo tall"></div>
+      </div>
+      <div class="ww-footer">
+        <strong>what we see is what we are</strong>
+        a project by cleve · <a href="#" style="color:#3e6257">email</a> · <a href="#" style="color:#3e6257">strangesongs</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Change breakdown -->
+<div class="annotation-row">
+  <div class="annotation-card">
+    <h3>strangesongs changes</h3>
+    <div class="change-item">
+      <div class="dot-new"></div>
+      <span>Add Fraunces Google Font, apply to <code>sidebar h1</code> only</span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span><code>border-right: 2px solid #4a148c</code> — already exists, no change</span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span>Lavender + deep purple palette — no change</span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span>Times New Roman body text — no change</span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span>Fixed sidebar layout — no change</span>
+    </div>
+    <div class="dot-legend">
+      <span><div class="d new"></div> new</span>
+      <span><div class="d keep"></div> unchanged</span>
+    </div>
+  </div>
+  <div class="annotation-card">
+    <h3>whatwesee changes</h3>
+    <div class="change-item">
+      <div class="dot-new"></div>
+      <span>Header border: <code>1px solid rgba(16,21,20,0.13)</code> → <code>2px solid #101514</code></span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span>Fraunces wordmark — already exists, no change</span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span>Fog/stone green-gray palette — no change</span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span>Space Grotesk body text — no change</span>
+    </div>
+    <div class="change-item">
+      <div class="dot-keep"></div>
+      <span>Masonry gallery layout — no change</span>
+    </div>
+    <div class="dot-legend">
+      <span><div class="d new"></div> new</span>
+      <span><div class="d keep"></div> unchanged</span>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>Total: 2 changes across both sites <span class="change-tag">recommended</span></strong>
+  strangesongs gets Fraunces on the <code>h1</code> nameplate (one font import, one rule).
+  whatwesee gets a stronger header border (<code>2px solid #101514</code>).
+  Both sites keep their entire visual identity — just those two contact points create coherence.
+  Anyone who visits both will recognize the same authorial hand without either site looking
+  like a template of the other.
+</div>
+
+<div class="nav-links">
+  <a href="concept-b.html">← Concept B: Fraunces bridge</a>
+  <a href="index.html">All concepts</a>
+</div>
+
+</body>
+</html>

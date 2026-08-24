@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Concept A — 2px Rule as Structural Signature</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: #f0f0f0;
+    padding: 2.5rem;
+    color: #111;
+  }
+
+  .concept-header {
+    max-width: 1060px;
+    margin: 0 auto 2rem;
+  }
+
+  .concept-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 0.4rem;
+  }
+
+  .concept-title {
+    font-family: 'Fraunces', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  .concept-desc {
+    font-size: 0.95rem;
+    color: #444;
+    line-height: 1.6;
+    max-width: 620px;
+  }
+
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    max-width: 1060px;
+    margin: 0 auto 2rem;
+  }
+
+  .panel {
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+  }
+
+  .panel-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    padding: 0.55rem 1rem;
+    background: #e8e8e8;
+    color: #555;
+    border-bottom: 1px solid #ddd;
+  }
+
+  /* ─── strangesongs panel ─── */
+  .ss-panel {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 15px;
+    color: #4a148c;
+    display: flex;
+  }
+
+  .ss-sidebar {
+    width: 180px;
+    flex-shrink: 0;
+    background: #f5f3ff;
+    /* THE SHARED ELEMENT: 2px solid border */
+    border-right: 2px solid #4a148c;
+    padding: 28px 20px;
+  }
+
+  .ss-h1 {
+    font-family: 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin-bottom: 24px;
+  }
+
+  .ss-nav {
+    list-style: none;
+    font-size: 15px;
+  }
+
+  .ss-nav li {
+    margin-bottom: 8px;
+  }
+
+  .ss-nav a {
+    color: #6a1b9a;
+    text-decoration: none;
+  }
+
+  .ss-nav .photography-link {
+    font-style: italic;
+    color: #6a1b9a;
+  }
+
+  .ss-content {
+    flex: 1;
+    padding: 28px 24px;
+    background: #f5f3ff;
+  }
+
+  .ss-recent-label {
+    font-size: 15px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #6a1b9a;
+  }
+
+  .ss-list {
+    list-style: none;
+    font-size: 14px;
+    line-height: 2;
+    color: #4a148c;
+  }
+
+  .ss-list li::before {
+    content: "— ";
+    opacity: 0.4;
+  }
+
+  /* ─── whatwesee panel ─── */
+  .ww-panel {
+    background: linear-gradient(145deg, #f9fbfa 0%, #eef1ef 60%, #dfe5e1 100%);
+    font-family: 'Space Grotesk', sans-serif;
+    color: #101514;
+  }
+
+  .ww-header {
+    padding: 14px 20px 12px;
+    /* THE SHARED ELEMENT: 2px solid border — same weight, horizontal instead of vertical */
+    border-bottom: 2px solid #101514;
+  }
+
+  .ww-wordmark {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 1.45rem;
+    letter-spacing: -0.025em;
+  }
+
+  .ww-rail {
+    display: flex;
+    gap: 6px;
+    padding: 10px 20px;
+    overflow: hidden;
+  }
+
+  .ww-pill {
+    border: 1px solid rgba(16,21,20,0.1);
+    background: rgba(255,255,255,0.56);
+    color: #58615d;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.82rem;
+    padding: 3px 10px;
+    white-space: nowrap;
+  }
+
+  .ww-pill.active {
+    border-color: rgba(62,98,87,0.34);
+    background: rgba(62,98,87,0.06);
+    color: #101514;
+    font-weight: 500;
+  }
+
+  .ww-gallery {
+    padding: 12px 20px;
+    column-count: 3;
+    column-gap: 8px;
+  }
+
+  .ww-photo {
+    background: rgba(16,21,20,0.08);
+    border: 1px solid rgba(16,21,20,0.13);
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+
+  .ww-photo.tall { height: 90px; }
+  .ww-photo.short { height: 60px; }
+  .ww-photo.med { height: 72px; }
+
+  .ww-footer {
+    padding: 16px 20px;
+    /* THE SHARED ELEMENT: same 2px line echoes at the base */
+    border-top: 2px solid rgba(16,21,20,0.18);
+    font-size: 0.78rem;
+    color: #58615d;
+  }
+
+  .ww-footer strong {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #101514;
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  /* ─── callout ─── */
+  .callout {
+    max-width: 1060px;
+    margin: 0 auto;
+    background: white;
+    border-left: 4px solid #333;
+    padding: 1rem 1.4rem;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.9rem;
+    line-height: 1.65;
+    color: #333;
+  }
+
+  .callout strong {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .change-tag {
+    display: inline-block;
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    margin-left: 4px;
+    vertical-align: middle;
+    letter-spacing: 0.04em;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1rem;
+    max-width: 1060px;
+    margin: 2rem auto 0;
+    font-size: 0.88rem;
+  }
+
+  .nav-links a {
+    color: #555;
+    text-decoration: none;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .nav-links a:hover { color: #111; border-color: #111; }
+</style>
+</head>
+<body>
+
+<div class="concept-header">
+  <div class="concept-label">Concept A of 3</div>
+  <h1 class="concept-title">2px Rule as Structural Signature</h1>
+  <p class="concept-desc">
+    Both sites already divide space with a hard line — strangesongs uses a 2px vertical border on the sidebar,
+    whatwesee uses a 1px horizontal border under the header. Making both <strong>2px solid</strong>
+    turns this into a deliberate shared gesture. Same weight; different axis; different color.
+    The typographic anchor: both wordmarks are in an old-style serif (Times&nbsp;NR on strangesongs, Fraunces on whatwesee).
+  </p>
+</div>
+
+<div class="comparison">
+
+  <!-- strangesongs panel -->
+  <div class="panel">
+    <div class="panel-label">strangesongs.github.io — no change needed</div>
+    <div class="ss-panel">
+      <div class="ss-sidebar">
+        <div class="ss-h1">cleve</div>
+        <ul class="ss-nav">
+          <li><a href="#">read watch listen</a></li>
+          <li><a href="#">writing</a></li>
+          <li><a href="#" class="photography-link">photography ↗</a></li>
+          <li><a href="#">about</a></li>
+        </ul>
+        <div style="margin-top:28px; padding-top:18px; border-top:1px solid rgba(74,20,140,0.2); font-size:13px; color:#6a1b9a; font-style:italic;">
+          cleve@strangesongs.com
+        </div>
+      </div>
+      <div class="ss-content">
+        <div class="ss-recent-label">recent</div>
+        <ul class="ss-list">
+          <li>A Novel of Letters</li>
+          <li>Conclave</li>
+          <li>The Brutalist</li>
+          <li>Sinners</li>
+          <li>Severance S2</li>
+        </ul>
+        <div style="margin-top:20px; font-size:12px; color:#888; font-style:italic;">
+          2px border-right is the existing structural spine
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- whatwesee panel -->
+  <div class="panel">
+    <div class="panel-label">whatwesee — proposed: header border 1px → 2px solid</div>
+    <div class="ww-panel">
+      <div class="ww-header">
+        <div class="ww-wordmark">what we see is what we are</div>
+      </div>
+      <div class="ww-rail">
+        <span class="ww-pill active">All photos</span>
+        <span class="ww-pill">Iceland</span>
+        <span class="ww-pill">New York</span>
+        <span class="ww-pill">Film</span>
+        <span class="ww-pill">Portraits</span>
+      </div>
+      <div class="ww-gallery">
+        <div class="ww-photo tall"></div>
+        <div class="ww-photo short"></div>
+        <div class="ww-photo med"></div>
+        <div class="ww-photo med"></div>
+        <div class="ww-photo tall"></div>
+        <div class="ww-photo short"></div>
+        <div class="ww-photo short"></div>
+        <div class="ww-photo med"></div>
+        <div class="ww-photo tall"></div>
+      </div>
+      <div class="ww-footer">
+        <strong>what we see is what we are</strong>
+        a project by cleve · <a href="#" style="color:#3e6257">email</a> · <a href="#" style="color:#3e6257">strangesongs</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="callout">
+  <strong>The shared element <span class="change-tag">1 change</span></strong>
+  whatwesee header border becomes <code>border-bottom: 2px solid #101514</code> (currently <code>1px solid rgba(16,21,20,0.13)</code>).
+  The footer optionally gains a matching <code>border-top: 2px solid</code>. strangesongs is
+  untouched — its sidebar border is already the right weight. The connection reads as intentional
+  but never identical: vertical vs. horizontal, purple vs. near-black, sidebar vs. header.
+</div>
+
+<div class="nav-links">
+  <a href="index.html">← All concepts</a>
+  <a href="concept-b.html">Concept B: Fraunces bridge →</a>
+</div>
+
+</body>
+</html>

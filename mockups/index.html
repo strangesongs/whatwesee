@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Design Concepts — Shared DNA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;1,9..144,400&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: #f0f0f0;
+    padding: 2.5rem;
+    color: #111;
+  }
+
+  .page-header {
+    max-width: 720px;
+    margin: 0 auto 3rem;
+  }
+
+  .page-header h1 {
+    font-family: 'Fraunces', serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.6rem;
+  }
+
+  .page-header p {
+    font-size: 0.97rem;
+    color: #444;
+    line-height: 1.65;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    max-width: 1060px;
+    margin: 0 auto;
+  }
+
+  .card {
+    background: white;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow 150ms ease, transform 150ms ease;
+  }
+
+  .card:hover {
+    box-shadow: 0 6px 24px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+  }
+
+  /* Thumbnail previews */
+  .card-thumb {
+    height: 200px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Concept A thumb: shows the 2px border as a visual motif */
+  .thumb-a {
+    display: flex;
+    height: 100%;
+  }
+
+  .thumb-a-ss {
+    width: 38%;
+    background: #f5f3ff;
+    border-right: 2px solid #4a148c;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .thumb-a-ss-name {
+    font-family: 'Times New Roman', serif;
+    font-size: 13px;
+    font-weight: bold;
+    color: #4a148c;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+  }
+
+  .thumb-a-ss-nav {
+    font-family: 'Times New Roman', serif;
+    font-size: 10px;
+    color: #6a1b9a;
+    line-height: 1.8;
+  }
+
+  .thumb-a-ww {
+    flex: 1;
+    background: linear-gradient(145deg, #f9fbfa, #eef1ef, #dfe5e1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .thumb-a-ww-header {
+    padding: 10px 12px 8px;
+    border-bottom: 2px solid #101514;
+  }
+
+  .thumb-a-ww-name {
+    font-family: 'Fraunces', serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #101514;
+    letter-spacing: -0.02em;
+  }
+
+  .thumb-a-ww-grid {
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    flex: 1;
+  }
+
+  .thumb-photo {
+    background: rgba(16,21,20,0.1);
+    border: 1px solid rgba(16,21,20,0.13);
+  }
+
+  /* Concept B thumb: nameplate fonts */
+  .thumb-b {
+    display: flex;
+    height: 100%;
+  }
+
+  .thumb-b-ss {
+    width: 38%;
+    background: #f5f3ff;
+    border-right: 2px solid #4a148c;
+    padding: 16px 12px;
+  }
+
+  .thumb-b-ss-name {
+    /* Fraunces (proposed) */
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #4a148c;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+
+  .thumb-b-ss-nav {
+    font-family: 'Times New Roman', serif;
+    font-size: 10px;
+    color: #6a1b9a;
+    line-height: 1.8;
+  }
+
+  .thumb-b-ww {
+    flex: 1;
+    background: linear-gradient(145deg, #f9fbfa, #eef1ef, #dfe5e1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .thumb-b-ww-header {
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid rgba(16,21,20,0.13);
+  }
+
+  .thumb-b-ww-name {
+    font-family: 'Fraunces', serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #101514;
+    letter-spacing: -0.02em;
+  }
+
+  .thumb-b-ww-grid {
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    flex: 1;
+  }
+
+  /* Concept C thumb: both */
+  .thumb-c {
+    display: flex;
+    height: 100%;
+  }
+
+  .thumb-c-ss {
+    width: 38%;
+    background: #f5f3ff;
+    border-right: 2px solid #4a148c;
+    padding: 16px 12px;
+  }
+
+  .thumb-c-ss-name {
+    font-family: 'Fraunces', serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #4a148c;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+
+  .thumb-c-ss-nav {
+    font-family: 'Times New Roman', serif;
+    font-size: 10px;
+    color: #6a1b9a;
+    line-height: 1.8;
+  }
+
+  .thumb-c-ww {
+    flex: 1;
+    background: linear-gradient(145deg, #f9fbfa, #eef1ef, #dfe5e1);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .thumb-c-ww-header {
+    padding: 10px 12px 8px;
+    border-bottom: 2px solid #101514;
+  }
+
+  .thumb-c-ww-name {
+    font-family: 'Fraunces', serif;
+    font-size: 10px;
+    font-weight: 700;
+    color: #101514;
+    letter-spacing: -0.02em;
+  }
+
+  .thumb-c-ww-grid {
+    padding: 8px 12px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    flex: 1;
+  }
+
+  /* Card body */
+  .card-body {
+    padding: 1.2rem 1.4rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .card-num {
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 0.3rem;
+  }
+
+  .card-title {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-desc {
+    font-size: 0.87rem;
+    color: #555;
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  .card-meta {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-size: 0.72rem;
+    border-radius: 3px;
+    padding: 2px 7px;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+  }
+
+  .tag-ss {
+    background: #f3e5f5;
+    color: #6a1b9a;
+  }
+
+  .tag-ww {
+    background: #e8f5e9;
+    color: #2e7d52;
+  }
+
+  .tag-none {
+    background: #f0f0f0;
+    color: #888;
+  }
+
+  .view-link {
+    display: inline-block;
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: #555;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 1px;
+  }
+
+  .card:hover .view-link {
+    color: #111;
+    border-color: #111;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Shared DNA — 3 Concepts</h1>
+  <p>
+    Mockups for how strangesongs.github.io and whatwesee can feel like sibling sites without matching each other.
+    Each concept identifies a single shared gesture — same move, tuned to each site's own visual language.
+    Click any card to see the full comparison.
+  </p>
+</div>
+
+<div class="cards">
+
+  <!-- Concept A -->
+  <a class="card" href="concept-a.html">
+    <div class="card-thumb">
+      <div class="thumb-a">
+        <div class="thumb-a-ss">
+          <div class="thumb-a-ss-name">cleve</div>
+          <div class="thumb-a-ss-nav">
+            read watch listen<br>
+            writing<br>
+            photography<br>
+            about
+          </div>
+        </div>
+        <div class="thumb-a-ww">
+          <div class="thumb-a-ww-header">
+            <div class="thumb-a-ww-name">what we see is what we are</div>
+          </div>
+          <div class="thumb-a-ww-grid">
+            <div class="thumb-photo" style="height:50px"></div>
+            <div class="thumb-photo" style="height:35px"></div>
+            <div class="thumb-photo" style="height:42px"></div>
+            <div class="thumb-photo" style="height:35px"></div>
+            <div class="thumb-photo" style="height:50px"></div>
+            <div class="thumb-photo" style="height:28px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-num">Concept A</div>
+      <div class="card-title">2px Rule</div>
+      <p class="card-desc">A hard border reads the same weight on both sites — vertical on strangesongs, horizontal on whatwesee. Nameplates stay in their own fonts (Times NR vs. Fraunces).</p>
+      <div class="card-meta">
+        <span class="tag tag-ss">strangesongs: no change</span>
+        <span class="tag tag-ww">whatwesee: 1 change</span>
+      </div>
+      <span class="view-link">View concept →</span>
+    </div>
+  </a>
+
+  <!-- Concept B -->
+  <a class="card" href="concept-b.html">
+    <div class="card-thumb">
+      <div class="thumb-b">
+        <div class="thumb-b-ss">
+          <div class="thumb-b-ss-name">cleve</div>
+          <div class="thumb-b-ss-nav">
+            read watch listen<br>
+            writing<br>
+            photography<br>
+            about
+          </div>
+        </div>
+        <div class="thumb-b-ww">
+          <div class="thumb-b-ww-header">
+            <div class="thumb-b-ww-name">what we see is what we are</div>
+          </div>
+          <div class="thumb-b-ww-grid">
+            <div class="thumb-photo" style="height:50px"></div>
+            <div class="thumb-photo" style="height:35px"></div>
+            <div class="thumb-photo" style="height:42px"></div>
+            <div class="thumb-photo" style="height:35px"></div>
+            <div class="thumb-photo" style="height:50px"></div>
+            <div class="thumb-photo" style="height:28px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-num">Concept B</div>
+      <div class="card-title">Fraunces Nameplate</div>
+      <p class="card-desc">Fraunces appears at the top of both sites — already on whatwesee, proposed for the "cleve" h1 on strangesongs. Body text stays completely separate.</p>
+      <div class="card-meta">
+        <span class="tag tag-ss">strangesongs: 1 change</span>
+        <span class="tag tag-none">whatwesee: no change</span>
+      </div>
+      <span class="view-link">View concept →</span>
+    </div>
+  </a>
+
+  <!-- Concept C -->
+  <a class="card" href="concept-c.html">
+    <div class="card-thumb">
+      <div class="thumb-c">
+        <div class="thumb-c-ss">
+          <div class="thumb-c-ss-name">cleve</div>
+          <div class="thumb-c-ss-nav">
+            read watch listen<br>
+            writing<br>
+            photography<br>
+            about
+          </div>
+        </div>
+        <div class="thumb-c-ww">
+          <div class="thumb-c-ww-header">
+            <div class="thumb-c-ww-name">what we see is what we are</div>
+          </div>
+          <div class="thumb-c-ww-grid">
+            <div class="thumb-photo" style="height:50px"></div>
+            <div class="thumb-photo" style="height:35px"></div>
+            <div class="thumb-photo" style="height:42px"></div>
+            <div class="thumb-photo" style="height:35px"></div>
+            <div class="thumb-photo" style="height:50px"></div>
+            <div class="thumb-photo" style="height:28px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="card-num">Concept C — recommended</div>
+      <div class="card-title">Both Together</div>
+      <p class="card-desc">A + B combined. Fraunces nameplate on both, 2px border on both (different axis and color). Two tiny changes; one clear family resemblance.</p>
+      <div class="card-meta">
+        <span class="tag tag-ss">strangesongs: 1 change</span>
+        <span class="tag tag-ww">whatwesee: 1 change</span>
+      </div>
+      <span class="view-link">View concept →</span>
+    </div>
+  </a>
+
+</div>
+
+</body>
+</html>
