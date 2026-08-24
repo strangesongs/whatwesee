@@ -5,3 +5,5 @@
 → https://strangesongs.github.io/photography.html
 
 This repository is an archive of the old standalone Flickr gallery. It is **not** deployed. You can delete the former Netlify site (`whatwesee.netlify.app`) — nothing here depends on it.
+
+The legacy client no longer calls the Flickr API. Edit manifests on `strangesongs.github.io` to update the live gallery.
