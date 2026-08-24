@@ -1,9 +1,0 @@
-[build]
-  publish = "src"
-  command = ""
-
-[[redirects]]
-  from = "/about.html"
-  to = "/index.html#contact"
-  status = 301
-  force = true

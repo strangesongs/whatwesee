@@ -1,29 +1,13 @@
 name: Site Health
 
 on:
-  schedule:
-    - cron: "17 */6 * * *"
   workflow_dispatch:
 
 jobs:
-  uptime-smoke:
+  archived:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Check required URL variable
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
+      - name: Gallery moved
         run: |
-          if [ -z "$SITE_URL" ]; then
-            echo "Repository variable SITE_URL is not set."
-            echo "Set SITE_URL to your production origin (for example https://example.com)."
-            exit 1
-          fi
-
-      - name: Run smoke checks
-        env:
-          SITE_URL: ${{ vars.SITE_URL }}
-        run: |
-          bash .github/scripts/smoke-check.sh "$SITE_URL"
+          echo "whatwesee is archived. Live site: https://strangesongs.github.io/photography.html"
+          echo "Scheduled Netlify health checks have been removed."

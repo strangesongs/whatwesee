@@ -2,41 +2,11 @@ name: Pre-release Check
 
 on:
   workflow_dispatch:
-    inputs:
-      target_url:
-        description: "Optional override for target URL (for example https://example.com)"
-        required: false
-        type: string
 
 jobs:
-  smoke:
+  archived:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Resolve target URL
-        id: resolve-url
-        env:
-          INPUT_URL: ${{ github.event.inputs.target_url }}
-          DEFAULT_URL: ${{ vars.SITE_URL }}
+      - name: Gallery moved
         run: |
-          set -euo pipefail
-          if [ -n "${INPUT_URL:-}" ]; then
-            url="$INPUT_URL"
-          elif [ -n "${DEFAULT_URL:-}" ]; then
-            url="$DEFAULT_URL"
-          else
-            echo "No target URL provided and repository variable SITE_URL is not set."
-            exit 1
-          fi
-
-          url="${url%/}"
-          echo "Using target URL: $url"
-          echo "target_url=$url" >> "$GITHUB_OUTPUT"
-
-      - name: Run smoke checks
-        env:
-          TARGET_URL: ${{ steps.resolve-url.outputs.target_url }}
-        run: |
-          bash .github/scripts/smoke-check.sh "$TARGET_URL"
+          echo "whatwesee is archived. Live site: https://strangesongs.github.io/photography.html"
