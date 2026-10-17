@@ -11,4 +11,4 @@ Photography portfolio ("what we see is what we are"), served from GitHub Pages a
 - No Flickr API or CDN, no Netlify config.
 - Photos only: no captions or per-photo metadata.
 - Keep it lightweight: no build step for the site itself, no client-side dependencies.
-- Lowercase text, Georgia serif, plain links.
+- Lowercase text, Archivo (self-hosted), plain links.
