@@ -1,13 +1,14 @@
 # Project Guidelines
 
-## Status
-- Archived. Live photography portfolio: https://strangesongs.github.io/photography.html
-- Do not re-add Netlify deploy config or Flickr API integration.
+Photography portfolio ("what we see is what we are"), served from GitHub Pages at https://strangesongs.github.io/whatwesee/.
 
-## Legacy layout (this repo)
-- Static files under `src/` (vanilla HTML/CSS/JS).
-- `src/scripts/app.js` shows an archive notice; it does not fetch from Flickr.
-- Local preview (historical): `npx http-server src`.
+## Layout
+- `src/` is the published site (vanilla HTML/CSS/JS, no framework). Paths are relative so it works under `/whatwesee/`.
+- `inbox/` holds local originals and is git-ignored. `scripts/build.mjs` resizes them into `src/photos/` and writes `src/photos.json`.
+- Do not hand-edit `src/photos.json`; it is generated.
 
 ## Conventions
-- Prefer directing new work to `strangesongs.github.io` (`photography.html`, `content/photography/`).
+- No Flickr API or CDN, no Netlify config.
+- Photos only: no captions or per-photo metadata.
+- Keep it lightweight: no build step for the site itself, no client-side dependencies.
+- Lowercase text, Georgia serif, plain links.

@@ -3,57 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Photography by j cretella. what we see is what we are.">
+    <title>what we see is what we are</title>
+    <meta name="description" content="Photography by j cretella.">
+    <meta name="theme-color" content="#fbfaf8">
     <meta property="og:title" content="what we see is what we are">
     <meta property="og:description" content="Photography by j cretella.">
     <meta property="og:type" content="website">
-    <meta property="og:image" content="https://live.staticflickr.com/65535/54241218541_f8130f44b1_z.jpg">
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <link rel="preconnect" href="https://live.staticflickr.com" crossorigin>
-    <link rel="stylesheet" href="styles/styles.css">
-    <title>what we see is what we are</title>
+    <link rel="preload" href="fonts/archivo-variable.woff" as="font" type="font/woff" crossorigin>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <noscript>
-        <p class="status-message">This archive no longer loads from Flickr. Live gallery: <a href="https://strangesongs.github.io/photography.html">strangesongs.github.io/photography.html</a></p>
-    </noscript>
-
-    <header class="site-header">
-        <h1 class="wordmark">what we see is what we are</h1>
-    </header>
-    <hr class="site-rule">
-
-    <main>
-        <nav id="album-nav" class="album-nav" aria-label="Album list"></nav>
-
-        <section id="gallery" aria-label="Photo gallery area">
-            <p id="gallery-meta" class="gallery-meta"></p>
-            <p id="status" class="status-message" aria-live="polite"></p>
-            <div id="photo-gallery" class="photo-gallery" aria-label="Photo gallery"></div>
-            <div class="gallery-footer">
-                <button id="load-more" class="load-more" type="button" hidden>load more</button>
-                <button id="retry-load" class="retry-load" type="button" hidden>retry</button>
+    <div class="layout">
+        <aside class="side">
+            <h1 class="wordmark"><a href="./">what we see is what we are</a></h1>
+            <nav id="album-nav" class="album-nav" aria-label="Albums" hidden></nav>
+            <div class="contact" id="contact">
+                <span>j cretella</span>
+                <a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a>
+                <a href="https://strangesongs.github.io">strangesongs.github.io</a>
             </div>
-        </section>
+        </aside>
 
-        <footer id="contact" class="footer-contact" aria-label="Contact information">
-            <p>j cretella — <a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a></p>
-            <p><a href="https://www.flickr.com/photos/196014147@N05/" target="_blank" rel="noopener noreferrer">flickr</a> · <a href="https://strangesongs.github.io" target="_blank" rel="noopener noreferrer">strangesongs.github.io</a></p>
-            <p id="last-updated" class="footer-meta"></p>
-        </footer>
-    </main>
-
-    <div id="lightbox" class="lightbox" aria-hidden="true" role="dialog" aria-modal="true" tabindex="-1" aria-label="Photo viewer">
-        <div class="lightbox-nav">
-            <button id="lightbox-close" type="button">close</button>
-            <button id="lightbox-prev" type="button">&larr; prev</button>
-            <button id="lightbox-next" type="button">next &rarr;</button>
-        </div>
-        <figure class="lightbox-figure">
-            <img id="lightbox-image" src="" alt="">
-        </figure>
+        <main>
+            <p id="status" class="status" aria-live="polite">loading…</p>
+            <div id="gallery" class="gallery" aria-label="Photos"></div>
+        </main>
     </div>
 
-    <script src="scripts/app.js"></script>
+    <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+        <div class="lb-bar">
+            <button id="lb-close" type="button">close</button>
+            <span id="lb-count" class="lb-count" aria-live="polite"></span>
+            <span class="lb-steps">
+                <button id="lb-prev" type="button">&larr; prev</button>
+                <button id="lb-next" type="button">next &rarr;</button>
+            </span>
+        </div>
+        <div class="lb-stage">
+            <img id="lb-img" class="lb-img" src="" alt="">
+        </div>
+    </div>
+
+    <noscript><p class="status">the gallery needs javascript to load.</p></noscript>
+    <script src="app.js"></script>
 </body>
 </html>

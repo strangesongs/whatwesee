@@ -1,0 +1,19 @@
+{
+  "name": "whatwesee",
+  "private": true,
+  "type": "module",
+  "description": "what we see is what we are — photography by j cretella",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "watch": "node scripts/watch.mjs",
+    "ship": "node scripts/build.mjs --ship",
+    "watch:ship": "node scripts/watch.mjs --ship",
+    "serve": "node scripts/serve.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.34.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

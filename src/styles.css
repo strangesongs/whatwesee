@@ -1,0 +1,320 @@
+/* Archivo (SIL Open Font License, see fonts/OFL.txt): variable font, Latin subset. */
+@font-face {
+    font-family: "Archivo";
+    src: url("fonts/archivo-variable.woff") format("woff");
+    font-weight: 100 900;
+    font-stretch: 62% 125%;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --paper: #fbfaf8;
+    --ink: #111;
+    --muted: #6a6862;
+    --placeholder: #ecebe6;
+    --side: 264px;
+    --gap: 16px;
+    --row: 290px; /* target row height of the photo grid */
+    --font: "Archivo", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 3px;
+}
+
+/* Layout: sidebar + photos. On narrow screens the sidebar parts stack
+   (wordmark, albums, photos, contact). */
+.layout {
+    display: flex;
+    flex-wrap: wrap;
+    min-height: 100vh;
+}
+
+.side {
+    flex: 0 0 var(--side);
+    align-self: flex-start;
+    position: sticky;
+    top: 0;
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 48px 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+}
+
+main {
+    flex: 999 1 560px;
+    min-width: 0;
+    padding: 48px 48px 72px 12px;
+}
+
+.wordmark {
+    margin: 0;
+    font-weight: 600;
+    font-stretch: 112%;
+    font-size: 15px;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+}
+
+.album-nav[hidden] {
+    display: none;
+}
+
+.album-nav ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.album-nav a {
+    color: var(--muted);
+    transition: color 120ms ease;
+}
+
+.album-nav a:hover {
+    color: var(--ink);
+}
+
+.album-nav .is-active {
+    color: var(--ink);
+    font-weight: 500;
+}
+
+.contact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.contact a:hover {
+    color: var(--ink);
+}
+
+.status {
+    margin: 0 0 1rem;
+    color: var(--muted);
+}
+
+.status[hidden] {
+    display: none;
+}
+
+/* Photo grid: rows that keep every photo's real proportions.
+   Each tile grows in proportion to its aspect ratio (--ar), so portraits and
+   landscapes share a row at the same height. The spacer keeps the last row
+   from stretching. */
+.gallery {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap);
+}
+
+.gallery::after {
+    content: "";
+    flex: 1000000 1 0;
+    height: 0;
+}
+
+.tile {
+    display: block;
+    min-width: 0;
+    flex: calc(var(--ar) * 100) 1 calc(var(--ar) * var(--row));
+    background: var(--placeholder);
+}
+
+.tile img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: opacity 150ms ease;
+}
+
+.tile:hover img {
+    opacity: 0.9;
+}
+
+/* Viewer */
+.no-scroll {
+    overflow: hidden;
+}
+
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    padding: 28px 40px 40px;
+    background: var(--paper);
+}
+
+.lightbox[hidden] {
+    display: none;
+}
+
+.lb-bar {
+    flex: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+}
+
+.lb-bar button {
+    padding: 0.5rem 0;
+    border: none;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: var(--ink);
+    cursor: pointer;
+    transition: color 120ms ease;
+}
+
+.lb-bar button:hover {
+    color: var(--muted);
+}
+
+.lb-bar button:disabled {
+    color: #b8b6af;
+    cursor: default;
+}
+
+.lb-steps {
+    display: flex;
+    gap: 28px;
+}
+
+.lb-count {
+    color: var(--muted);
+}
+
+.lb-stage {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+}
+
+.lb-img {
+    flex: 1 1 0;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: contain;
+    transition: opacity 120ms ease;
+}
+
+.lb-img.is-loading {
+    opacity: 0.35;
+}
+
+/* Narrow screens: stack wordmark, albums, photos, contact. */
+@media (max-width: 860px) {
+    :root {
+        --gap: 8px;
+        --row: 170px;
+    }
+
+    .side {
+        display: contents;
+    }
+
+    .wordmark {
+        order: 1;
+        flex: 1 1 100%;
+        padding: 24px 16px 0;
+    }
+
+    .album-nav {
+        order: 2;
+        flex: 1 1 100%;
+        padding: 16px 16px 0;
+    }
+
+    .album-nav ul {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0 22px;
+    }
+
+    /* comfortable touch targets (~44px tall) */
+    .album-nav a,
+    .album-nav .is-active,
+    .contact a {
+        display: inline-block;
+        padding: 12px 0;
+    }
+
+    main {
+        order: 3;
+        flex: 1 1 100%;
+        padding: 24px 16px 40px;
+    }
+
+    .contact {
+        order: 4;
+        flex: 1 1 100%;
+        padding: 0 16px 40px;
+    }
+
+    /* viewer: photo fills the screen, controls sit at the bottom within thumb reach */
+    .lightbox {
+        padding: 12px 16px calc(8px + env(safe-area-inset-bottom));
+    }
+
+    .lb-bar {
+        order: 2;
+        padding: 8px 0 0;
+    }
+
+    .lb-bar button {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0 4px;
+    }
+
+    .lb-steps {
+        gap: 12px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    * {
+        transition: none !important;
+    }
+}
