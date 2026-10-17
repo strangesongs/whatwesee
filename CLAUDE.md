@@ -43,6 +43,12 @@ Optional files: `src/photos/order.json` (album order), `src/photos/<album>/album
 - Mobile (<=860px): stacked header, 44px tap targets, viewer controls at the bottom, swipe to navigate.
 - `scripts/serve.mjs` is a tiny local server; `scripts/watch.mjs` is the inbox watcher.
 
+## Share preview and icons
+
+- `src/og.jpg` (1200x630) is the link-preview image. `npm run build` makes it once from the first landscape photo; delete it to regenerate, or drop in your own.
+- `src/favicon.svg` and `src/apple-touch-icon.png` are the tab and home-screen icons.
+- Photos fade in as they load (`.fade` / `.is-loaded` in `app.js` and `styles.css`).
+
 ## Design decisions (don't undo without asking)
 
 Left sidebar with albums, off-white paper, Archivo grotesque, photos only (no captions), justified rows keeping natural aspect ratios.

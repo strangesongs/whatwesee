@@ -156,11 +156,22 @@ main {
     display: block;
     width: 100%;
     height: auto;
-    transition: opacity 150ms ease;
+    transition: opacity 600ms ease;
 }
 
-.tile:hover img {
+/* fade each photo in as it finishes loading (class added by app.js) */
+.tile img.fade {
+    opacity: 0;
+}
+
+.tile img.fade.is-loaded {
+    opacity: 1;
+}
+
+.tile:hover img.is-loaded,
+.tile:hover img:not(.fade) {
     opacity: 0.9;
+    transition-duration: 150ms;
 }
 
 /* Viewer */

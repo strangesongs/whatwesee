@@ -140,9 +140,25 @@ async function writeManifest() {
     return { changed: true, albums };
 }
 
+// Share-preview image (og.jpg, 1200x630). Made once from the first landscape photo;
+// delete src/og.jpg to regenerate it, or drop in your own 1200x630 JPEG.
+async function ensureShareImage(manifest) {
+    const target = path.join(ROOT, 'src', 'og.jpg');
+    if (await fs.stat(target).catch(() => null)) return;
+    const album = manifest.albums.find((a) => a.photos.length);
+    if (!album) return;
+    const pick = album.photos.find((p) => p.w > p.h) || album.photos[0];
+    await sharp(path.join(OUT, album.slug, pick.file))
+        .resize(1200, 630, { fit: 'cover', position: 'attention' })
+        .jpeg({ quality: 82, mozjpeg: true })
+        .toFile(target);
+    console.log('made src/og.jpg (share preview)');
+}
+
 export async function build({ force = false } = {}) {
     const stats = await ingest(force);
     const manifest = await writeManifest();
+    await ensureShareImage(manifest);
 
     const total = manifest.albums.reduce((n, a) => n + a.photos.length, 0);
     const named = manifest.albums.filter((a) => a.slug !== LOOSE).length;

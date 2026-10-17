@@ -73,8 +73,13 @@
             img.height = p.h;
             img.alt = '';
             img.decoding = 'async';
+            img.classList.add('fade');
+            const shown = () => img.classList.add('is-loaded');
+            img.addEventListener('load', shown, { once: true });
+            img.addEventListener('error', shown, { once: true });
             if (i > 11) img.loading = 'lazy';
             a.appendChild(img);
+            if (img.complete && img.naturalWidth) shown();
             frag.appendChild(a);
         });
         galleryEl.textContent = '';
