@@ -23,7 +23,8 @@ Untagged photos only appear under "all".
 The owner doesn't use the terminal: the everyday path is the **whatwesee studio.app** in the project root
 (double-click; don't tell them to run npm commands). Two parts, because macOS terminates anything an app
 spawned once the app's main process exits:
-- `Contents/MacOS/whatwesee-studio` (bash): if port 8091 isn't answering, `open -g -a` the hidden helper,
+- `Contents/MacOS/whatwesee-studio` (bash): if the running server started before the newest file in scripts/ was
+  changed, `pkill`s it (so code updates apply on next open). If port 8091 isn't answering, `open -g -a` the hidden helper,
   waits for it, then opens http://localhost:8091/admin/ as a Chrome `--app` window (else the default browser).
 - `Contents/Resources/whatwesee server.app` (LSBackgroundOnly, bash): finds node, `npm install` if sharp is
   missing, then `exec node scripts/serve.mjs` with IDLE_MINUTES=20, so the server IS that helper app's process.
@@ -32,8 +33,9 @@ The app normally lives in the project root (falls back to the absolute path if m
 
 1. Uploader page: http://localhost:8091/admin/ (local only; lives in `scripts/admin/`, never published).
 2. Drop photos, type tags, upload. The page also retags, bulk-tags, reorders photos (drag; in an album view
-   this sets that album's own `order` in photos.json, otherwise the order of "all"), renames/reorders albums,
-   and removes photos.
+   this sets that album's own `order`, otherwise the order of "all"), sorts by date, edits dates, hides/shows
+   (moves files between src/photos and staging), merges albums (rename to an existing name), warns on duplicate
+   uploads (409 + "upload anyway"), renames/reorders albums, and deletes photos.
 3. "publish" on that page = `git add -A && git commit -m "update photos" && git push` (whole repo, not just src/).
 
 Optional drop folder: `inbox/` (no tags) and `inbox/<name>/` (tagged `<name>`), then `npm run build`.
@@ -50,10 +52,15 @@ Only the resized copies (2048px full, 800px thumb, ~420 KB per photo, metadata/G
 ## How it works
 
 - `src/` is the entire site. `src/index.html`, `app.js`, `styles.css`; paths are relative because it lives under `/whatwesee/`.
-- Photos are flat: `src/photos/<file>.jpg` + `src/photos/thumbs/<file>.jpg`.
-- `src/photos.json` = `{ albums: [{slug, title}], photos: [{file, w, h, tags: [slug]}] }`. `albums` is the sidebar
-  order and names; `photos` is the display order (newest uploads first). Written by the upload page and
-  `scripts/build.mjs` via `scripts/library.mjs`; prefer those over hand edits. Unused tags are dropped automatically.
+- Photos are flat: `src/photos/<file>.jpg` + `src/photos/thumbs/<file>.jpg`. Hidden photos: `staging/<file>.jpg` (+ thumbs).
+- The library (source of truth) is `staging/library.json` (git-ignored, local only):
+  `{ albums: [{slug, title, order?}], photos: [{file, w, h, tags, date?, hidden?, dhash?}] }`. `albums` = sidebar
+  order/names, `order` = that album's own photo order; `photos` = order of "all" (newest uploads first);
+  `date` = taken (EXIF DateTimeOriginal, or typed); `dhash` = 64-bit perceptual hash for duplicate warnings.
+- `src/photos.json` is the public subset written alongside it (non-hidden photos; file/w/h/tags/date only; album
+  orders filtered). If it's newer than the local file (git pull, older studio), `readLibrary` takes it and keeps the
+  local extras. Everything goes through `scripts/library.mjs` (`withLibrary`); unused tags are dropped automatically.
+- On server start, `backfill()` fills missing `dhash` and missing dates from originals in `inbox/`.
 - `scripts/library.mjs` also migrates the old folder-per-album layout (`src/photos/<album>/`) to tags on first read.
 - Routing is hash-based: `#`, `#album/<tag>`, `#album/<tag>/<file>`, `#photo/<file>` (old `#photo/<album>/<file>` links still work).
 - Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size).

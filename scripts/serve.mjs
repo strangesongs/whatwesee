@@ -12,8 +12,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-    SRC, PHOTOS, THUMBS, IMAGE, UNSUPPORTED,
+    SRC, STAGING, IMAGE, UNSUPPORTED,
     withLibrary, readLibrary, resolveTags, makeWebCopies, uniqueName, ensureShareImage,
+    inspect, findDuplicate, setHidden, removePhotos, sortByDate, mergeAlbums, backfill,
     hasUnpublished, publish,
 } from './library.mjs';
 
@@ -69,18 +70,21 @@ const list = (v) => (Array.isArray(v) ? v.filter((x) => typeof x === 'string') :
 
 function findPhoto(lib, file) {
     const p = lib.photos.find((x) => x.file === file);
-    if (!p) throw new HttpError(404, `${file} is not on the site`);
+    if (!p) throw new HttpError(404, `${file} is not in the studio`);
     return p;
 }
 
 /* API used by scripts/admin/ */
 
+const STARTED = Date.now(); // the app restarts the server when scripts/ is newer than this
+
 const routes = {
     'GET /api/library': () => readLibrary(),
 
-    'GET /api/status': async () => ({ unpublished: await hasUnpublished().catch(() => false) }),
+    'GET /api/status': async () => ({ unpublished: await hasUnpublished().catch(() => false), started: STARTED }),
 
-    // body: the image file itself. ?name=<original file name>&tags=<json list>&at=<position>
+    // body: the image file itself.
+    // ?name=<original file name>&tags=<json list>&at=<position>&hidden=1&force=1
     'POST /api/upload': async (req, url) => {
         const original = url.searchParams.get('name') || 'photo.jpg';
         if (UNSUPPORTED.test(original)) {
@@ -94,30 +98,49 @@ const routes = {
             throw new HttpError(400, 'bad tags');
         }
         const at = Math.max(0, Number(url.searchParams.get('at')) || 0);
+        const hidden = url.searchParams.get('hidden') === '1';
+        const force = url.searchParams.get('force') === '1';
         const body = await readBody(req, MAX_UPLOAD);
         if (!body.length) throw new HttpError(400, 'empty file');
 
+        const { date, dhash } = await inspect(body);
         const lib = await withLibrary(async (lib) => {
+            const twin = force ? null : findDuplicate(lib, dhash);
+            if (twin) {
+                const err = new HttpError(409, `looks like ${twin.file}, already in the studio${twin.hidden ? ' (hidden)' : ''}`);
+                err.duplicate = twin.file;
+                throw err;
+            }
             const file = await uniqueName(lib, path.parse(original).name);
             let size;
             try {
-                size = await makeWebCopies(body, file);
+                size = await makeWebCopies(body, file, { hidden });
             } catch (err) {
-                await fs.rm(path.join(PHOTOS, file), { force: true });
-                await fs.rm(path.join(THUMBS, file), { force: true });
+                await removePhotos({ photos: [{ file, hidden }] }, [file]);
                 throw new HttpError(422, `couldn't read this image (${String(err.message).split('\n')[0]})`);
             }
-            lib.photos.splice(Math.min(at, lib.photos.length), 0, { file, ...size, tags: resolveTags(lib, tags) });
+            const photo = { file, ...size, tags: resolveTags(lib, tags) };
+            if (date) photo.date = date;
+            if (dhash) photo.dhash = dhash;
+            if (hidden) photo.hidden = true;
+            lib.photos.splice(Math.min(at, lib.photos.length), 0, photo);
         });
         await ensureShareImage(lib).catch(() => {});
         return lib;
     },
 
-    // { file, tags }: replace one photo's tags
+    // { file, tags?, date? }: change one photo's tags and/or date ("" clears the date)
     'POST /api/photo': async (req) => {
-        const { file, tags } = await readJson(req);
+        const body = await readJson(req);
         return withLibrary((lib) => {
-            findPhoto(lib, file).tags = resolveTags(lib, list(tags));
+            const p = findPhoto(lib, body.file);
+            if (Array.isArray(body.tags)) p.tags = resolveTags(lib, list(body.tags));
+            if (typeof body.date === 'string') {
+                const d = body.date.trim();
+                if (!d) delete p.date;
+                else if (/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/.test(d)) p.date = d;
+                else throw new HttpError(400, 'dates look like 2024-05-03');
+            }
         });
     },
 
@@ -134,16 +157,24 @@ const routes = {
         });
     },
 
-    // { files }: take photos off the site
+    // { files, hidden }: take photos off the site but keep them in the studio, or put them back
+    'POST /api/visibility': async (req) => {
+        const body = await readJson(req);
+        const lib = await withLibrary(async (lib) => {
+            const files = list(body.files);
+            files.forEach((f) => findPhoto(lib, f));
+            await setHidden(lib, files, Boolean(body.hidden));
+        });
+        await ensureShareImage(lib).catch(() => {});
+        return lib;
+    },
+
+    // { files }: take photos off the site and out of the studio
     'POST /api/delete': async (req) => {
         const { files } = await readJson(req);
         return withLibrary(async (lib) => {
-            for (const file of list(files)) {
-                findPhoto(lib, file);
-                await fs.rm(path.join(PHOTOS, file), { force: true });
-                await fs.rm(path.join(THUMBS, file), { force: true });
-                lib.photos = lib.photos.filter((p) => p.file !== file);
-            }
+            list(files).forEach((f) => findPhoto(lib, f));
+            await removePhotos(lib, list(files));
         });
     },
 
@@ -159,6 +190,23 @@ const routes = {
             } else {
                 lib.photos = [...wanted, ...lib.photos.filter((p) => !wanted.includes(p))];
             }
+        });
+    },
+
+    // { album?, newestFirst }: order "all" or one album by date taken
+    'POST /api/sort': async (req) => {
+        const { album, newestFirst } = await readJson(req);
+        return withLibrary((lib) => {
+            if (album && !lib.albums.some((a) => a.slug === album)) throw new HttpError(404, 'no such album');
+            sortByDate(lib, album || null, Boolean(newestFirst));
+        });
+    },
+
+    // { from, into }: fold one album into another
+    'POST /api/merge': async (req) => {
+        const { from, into } = await readJson(req);
+        return withLibrary((lib) => {
+            if (!mergeAlbums(lib, from, into)) throw new HttpError(400, 'pick two different albums');
         });
     },
 
@@ -255,11 +303,16 @@ const server = http.createServer(async (req, res) => {
             return;
         }
         if (pathname.startsWith('/admin/')) return await serveFile(res, ADMIN, pathname.slice('/admin'.length));
+        if (pathname.startsWith('/staging/') && !pathname.endsWith('.json')) {
+            return await serveFile(res, STAGING, pathname.slice('/staging'.length)); // hidden photos, for the studio page
+        }
         await serveFile(res, SRC, pathname);
     } catch (err) {
         const status = err.status || 500;
         if (status === 500) console.error(err);
-        if (!res.headersSent) sendJson(res, status, { error: err.status ? err.message : `something went wrong: ${err.message}` });
+        const body = { error: err.status ? err.message : `something went wrong: ${err.message}` };
+        if (err.duplicate) body.duplicate = err.duplicate;
+        if (!res.headersSent) sendJson(res, status, body);
         else res.end();
     }
 });
@@ -288,6 +341,9 @@ await readLibrary().catch((err) => console.error(`couldn't read src/photos.json:
 
 server.listen(PORT, '127.0.0.1', () => {
     console.log(`${new Date().toISOString()} started`);
+    backfill()
+        .then((n) => n && console.log(`filled in dates/fingerprints for ${n} photo(s)`))
+        .catch((err) => console.error(`backfill: ${err.message}`));
     console.log(`site:          http://localhost:${PORT}`);
     console.log(`upload & tag:  http://localhost:${PORT}/admin/`);
     console.log('(Ctrl+C to stop)');

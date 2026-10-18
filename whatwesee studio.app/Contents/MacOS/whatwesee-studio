@@ -6,6 +6,8 @@
 
 APP="$(cd "$(dirname "$0")/../.." && pwd)"
 HELPER="$APP/Contents/Resources/whatwesee server.app"
+ROOT="$(dirname "$APP")"
+[ -f "$ROOT/scripts/serve.mjs" ] || ROOT="/Users/jcrtll/Desktop/programming/whatwesee"
 PORT=8091
 URL="http://localhost:$PORT/admin/"
 LOG="$HOME/Library/Logs/whatwesee-studio.log"
@@ -19,6 +21,21 @@ running() {
 helper_alive() {
     pgrep -f "MacOS/whatwesee-server$" >/dev/null
 }
+
+# If the uploader's code changed since the running copy started, stop that copy
+# so the new version starts below.
+if running; then
+    started="$(curl -s --max-time 2 "http://localhost:$PORT/api/status" | sed -n 's/.*"started":\([0-9]*\).*/\1/p')"
+    newest=0
+    for f in "$ROOT"/scripts/*.mjs "$ROOT"/scripts/admin/*; do
+        m="$(stat -f %m "$f" 2>/dev/null || stat -c %Y "$f" 2>/dev/null || echo 0)"
+        [ "$m" -gt "$newest" ] && newest="$m"
+    done
+    if [ -z "$started" ] || [ "$newest" -gt $((started / 1000)) ]; then
+        pkill -f "node scripts/serve.mjs"
+        for _ in $(seq 1 40); do running || break; sleep 0.25; done
+    fi
+fi
 
 if ! running; then
     rm -f "$LOG.failed"

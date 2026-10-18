@@ -2,5 +2,7 @@
 node_modules/
 # originals live here locally; only the resized copies in src/photos are published
 inbox/
+# hidden photos and the studio's full library: on this computer only
+staging/
 # the full Archivo download (all weights); the site uses the single subset file in src/fonts/
 src/fonts/Archivo/

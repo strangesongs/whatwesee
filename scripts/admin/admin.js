@@ -1,4 +1,4 @@
-// Upload page: add photos with tags, retag, reorder, rename albums, publish.
+// Upload page: add photos with tags, retag, reorder, dates, hide/show, merge albums, publish.
 // Talks to the small API in scripts/serve.mjs.
 (() => {
     'use strict';
@@ -7,6 +7,7 @@
     const IMAGE = /\.(jpe?g|png|webp|tiff?|gif|avif)$/i;
     const UNSUPPORTED = /\.(heic|heif|raw|cr2|cr3|nef|arw|dng|psd)$/i;
     const UNTAGGED = '\u0000untagged';
+    const HIDDEN = '\u0000hidden';
 
     let lib = { albums: [], photos: [] };
     let queue = []; // { file, url, state: 'ready'|'uploading'|'error', note }
@@ -25,6 +26,10 @@
     };
     const titleOf = (tag) => albumFor(tag)?.title || tag;
     const keyOf = (tag) => albumFor(tag)?.slug || slugify(tag);
+    // "2024-05-03T19:50:22" -> "may 3, 2024"
+    const fmtDate = (d) => (d
+        ? new Date(`${d.slice(0, 10)}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase()
+        : '');
     const el = (tag, props = {}, ...kids) => {
         const node = Object.assign(document.createElement(tag), props);
         node.append(...kids.filter((k) => k !== null && k !== undefined));
@@ -46,7 +51,12 @@
             throw new Error('the uploader has stopped — close this window and open whatwesee studio again');
         }
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `error ${res.status}`);
+        if (!res.ok) {
+            const err = new Error(data.error || `error ${res.status}`);
+            err.status = res.status;
+            err.duplicate = data.duplicate;
+            throw err;
+        }
         return data;
     }
 
@@ -76,7 +86,7 @@
         lib = next;
         const files = new Set(lib.photos.map((p) => p.file));
         [...selected].forEach((f) => { if (!files.has(f)) selected.delete(f); });
-        if (filter && filter !== UNTAGGED && !lib.albums.some((a) => a.slug === filter)) filter = '';
+        if (isAlbum() && !lib.albums.some((a) => a.slug === filter)) filter = '';
         renderDatalist();
         renderAlbums();
         renderFilter();
@@ -171,11 +181,23 @@
     const countFor = (slug) =>
         slug === '' ? lib.photos.length
             : slug === UNTAGGED ? lib.photos.filter((p) => !p.tags.length).length
-                : lib.photos.filter((p) => p.tags.includes(slug)).length;
+                : slug === HIDDEN ? lib.photos.filter((p) => p.hidden).length
+                    : lib.photos.filter((p) => p.tags.includes(slug)).length;
 
     async function saveAlbums(albums) {
         try {
             setLibrary(await api('/api/albums', { albums }));
+        } catch (err) {
+            toast(err.message, true);
+            renderAlbums();
+        }
+    }
+
+    async function mergeAlbums(from, into) {
+        try {
+            setLibrary(await api('/api/merge', { from: from.slug, into: into.slug }));
+            if (filter === from.slug) { filter = into.slug; renderFilter(); renderLibrary(); }
+            toast(`merged “${from.title}” into “${into.title}”`);
         } catch (err) {
             toast(err.message, true);
             renderAlbums();
@@ -192,6 +214,16 @@
                 const title = name.value.trim();
                 if (!title) { name.value = a.title; return; }
                 if (title === a.title) return;
+                const other = lib.albums.find((x) => x !== a &&
+                    (x.title.toLowerCase() === title.toLowerCase() || x.slug === slugify(title)));
+                if (other) {
+                    if (confirm(`“${other.title}” already exists. Merge “${a.title}” into it?\n\nIts ${countFor(a.slug)} photo(s) move into “${other.title}”, and “${a.title}” goes away.`)) {
+                        mergeAlbums(a, other);
+                    } else {
+                        name.value = a.title;
+                    }
+                    return;
+                }
                 saveAlbums(lib.albums.map((x) => (x.slug === a.slug ? { ...x, title } : x)));
             };
             name.addEventListener('change', save);
@@ -220,6 +252,7 @@
         const items = [
             { key: '', label: 'all' },
             { key: UNTAGGED, label: 'untagged' },
+            ...(countFor(HIDDEN) || filter === HIDDEN ? [{ key: HIDDEN, label: 'hidden' }] : []),
             ...lib.albums.map((a) => ({ key: a.slug, label: a.title })),
         ];
         $('filter').replaceChildren(...items.map(({ key, label }) => {
@@ -234,9 +267,14 @@
         }));
     }
 
+    function countText() {
+        const hidden = countFor(HIDDEN);
+        return `· ${lib.photos.length}${hidden ? ` (${hidden} hidden)` : ''}`;
+    }
+
     function updateCounts() {
         renderFilter();
-        $('count').textContent = `· ${lib.photos.length}`;
+        $('count').textContent = countText();
     }
 
     /* Library grid */
@@ -251,16 +289,40 @@
             ...tagged.filter((p) => rank.has(p.file)).sort((a, b) => rank.get(a.file) - rank.get(b.file))];
     }
 
-    const isAlbum = () => filter !== '' && filter !== UNTAGGED;
+    const isAlbum = () => filter !== '' && filter !== UNTAGGED && filter !== HIDDEN;
     const shown = () =>
         filter === '' ? lib.photos
             : filter === UNTAGGED ? lib.photos.filter((p) => !p.tags.length)
-                : albumPhotos(filter);
+                : filter === HIDDEN ? lib.photos.filter((p) => p.hidden)
+                    : albumPhotos(filter);
+    const thumbUrl = (p) => `/${p.hidden ? 'staging' : 'photos'}/thumbs/${encodeURIComponent(p.file)}`;
+
+    async function setHidden(files, hidden) {
+        try {
+            setLibrary(await api('/api/visibility', { files, hidden }));
+            const n = files.length === 1 ? 'photo' : `${files.length} photos`;
+            toast(hidden ? `${n} hidden — off the site after you publish` : `${n} back on the site after you publish`);
+        } catch (err) {
+            toast(err.message, true);
+        }
+    }
+
+    async function sortByDate(newestFirst) {
+        const what = isAlbum() ? `“${lib.albums.find((a) => a.slug === filter)?.title}”` : '“all”';
+        const undated = shown().filter((p) => !p.date).length;
+        const note = undated ? `\n\n${undated} photo(s) without a date go at the end.` : '';
+        if (!confirm(`Sort ${what} by date taken, ${newestFirst ? 'newest' : 'oldest'} first? This replaces its current order.${note}`)) return;
+        try {
+            setLibrary(await api('/api/sort', isAlbum() ? { album: filter, newestFirst } : { newestFirst }));
+        } catch (err) {
+            toast(err.message, true);
+        }
+    }
 
     async function removePhotos(files) {
         try {
             setLibrary(await api('/api/delete', { files }));
-            toast(files.length === 1 ? 'taken off the site' : `${files.length} photos taken off the site`);
+            toast(files.length === 1 ? 'removed' : `${files.length} photos removed`);
         } catch (err) {
             toast(err.message, true);
         }
@@ -270,10 +332,12 @@
         const c = el('div', { className: 'card' });
         c.dataset.file = p.file;
         c.classList.toggle('is-selected', selected.has(p.file));
+        c.classList.toggle('is-hidden', Boolean(p.hidden));
 
         const frame = el('button', { type: 'button', className: 'frame', draggable: true, title: p.file },
-            el('img', { src: `/photos/thumbs/${encodeURIComponent(p.file)}`, alt: '', loading: 'lazy', decoding: 'async' }),
-            el('span', { className: 'tick', textContent: '✓', ariaHidden: 'true' }));
+            el('img', { src: thumbUrl(p), alt: '', loading: 'lazy', decoding: 'async' }),
+            el('span', { className: 'tick', textContent: '✓', ariaHidden: 'true' }),
+            p.hidden ? el('span', { className: 'badge', textContent: 'hidden' }) : null);
         frame.setAttribute('aria-pressed', String(selected.has(p.file)));
         frame.setAttribute('aria-label', `select ${p.file}`);
         frame.addEventListener('click', () => {
@@ -324,15 +388,15 @@
             }
         });
 
-        const remove = el('button', { type: 'button', className: 'link remove', textContent: 'remove' });
+        const remove = el('button', { type: 'button', className: 'link remove', textContent: 'delete', title: 'delete from the studio and the site' });
         let armed = null;
         remove.addEventListener('click', () => {
             if (!armed) {
-                remove.textContent = 'take off site?';
+                remove.textContent = 'delete for good?';
                 remove.classList.add('is-armed');
                 armed = setTimeout(() => {
                     armed = null;
-                    remove.textContent = 'remove';
+                    remove.textContent = 'delete';
                     remove.classList.remove('is-armed');
                 }, 3000);
                 return;
@@ -341,7 +405,44 @@
             removePhotos([p.file]);
         });
 
-        const view = el('a', { href: `/#photo/${encodeURIComponent(p.file)}`, target: '_blank', rel: 'noopener', textContent: 'view' });
+        const view = p.hidden ? null
+            : el('a', { href: `/#photo/${encodeURIComponent(p.file)}`, target: '_blank', rel: 'noopener', textContent: 'view' });
+        const toggle = el('button', { type: 'button', className: 'link', textContent: p.hidden ? 'show' : 'hide',
+            title: p.hidden ? 'put back on the site' : 'keep in the studio but off the site' });
+        toggle.addEventListener('click', () => setHidden([p.file], !p.hidden));
+
+        // date taken: click to set or change it (scans often have none)
+        const date = el('button', { type: 'button', className: `date${p.date ? '' : ' is-empty'}`,
+            textContent: p.date ? fmtDate(p.date) : 'add date', title: p.date ? `taken ${p.date.replace('T', ' ')}` : 'when was it taken?' });
+        date.addEventListener('click', () => {
+            const input = el('input', { type: 'date', className: 'date-input', value: p.date ? p.date.slice(0, 10) : '' });
+            input.setAttribute('aria-label', `date taken for ${p.file}`);
+            let saved = false;
+            const save = async () => {
+                if (saved) return;
+                saved = true;
+                const value = input.value;
+                const before = p.date ? p.date.slice(0, 10) : '';
+                if (value === before) { input.replaceWith(date); return; }
+                try {
+                    setLibrary(await api('/api/photo', { file: p.file, date: value }), { keepCards: true });
+                    p.date = lib.photos.find((x) => x.file === p.file)?.date;
+                    date.textContent = p.date ? fmtDate(p.date) : 'add date';
+                    date.classList.toggle('is-empty', !p.date);
+                } catch (err) {
+                    toast(err.message, true);
+                }
+                input.replaceWith(date);
+            };
+            // saves on enter or when you click away (not on every keystroke: half-typed years are valid dates)
+            input.addEventListener('blur', save);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') save();
+                if (e.key === 'Escape') { saved = true; input.replaceWith(date); }
+            });
+            date.replaceWith(input);
+            input.focus();
+        });
         const tags = el('div');
         tagField(tags, {
             value: p.tags,
@@ -359,7 +460,10 @@
             },
         });
 
-        c.append(frame, el('div', { className: 'meta' }, el('span', { className: 'name', textContent: p.file }), view, remove), tags);
+        c.append(frame,
+            el('div', { className: 'meta' }, el('span', { className: 'name', textContent: p.file }), date),
+            el('div', { className: 'actions' }, view, toggle, remove),
+            tags);
         return c;
     }
 
@@ -370,10 +474,13 @@
             ? `drag to set the order of “${title}” (only this album changes). click a photo to select it.`
             : filter === UNTAGGED
                 ? 'click photos to select them, then give them tags above.'
-                : 'drag photos to set the order of “all”. click a photo to select it for tagging in bulk.';
+                : filter === HIDDEN
+                    ? 'hidden photos stay here but aren’t on the site (or on GitHub). “show” puts one back.'
+                    : 'drag photos to set the order of “all”. click a photo to select it for tagging in bulk.';
+        $('sort').hidden = !(filter === '' || isAlbum()) || photos.length < 2;
         $('library').replaceChildren(...photos.map(card));
         $('library').classList.toggle('is-selecting', selected.size > 0);
-        $('count').textContent = `· ${lib.photos.length}`;
+        $('count').textContent = countText();
         const empty = $('empty');
         empty.hidden = photos.length > 0;
         empty.textContent = lib.photos.length ? 'nothing here.' : 'no photos yet — add some on the left.';
@@ -410,16 +517,16 @@
     function bulkDelete() {
         const b = $('bulk-delete');
         if (!bulkDeleteArmed) {
-            b.textContent = `really take ${selected.size} off?`;
+            b.textContent = `really delete ${selected.size}?`;
             bulkDeleteArmed = setTimeout(() => {
                 bulkDeleteArmed = null;
-                b.textContent = 'take off site';
+                b.textContent = 'delete';
             }, 3000);
             return;
         }
         clearTimeout(bulkDeleteArmed);
         bulkDeleteArmed = null;
-        b.textContent = 'take off site';
+        b.textContent = 'delete';
         removePhotos([...selected]);
     }
 
@@ -439,13 +546,14 @@
                 item.note = 'not a photo';
             } else {
                 item.url = URL.createObjectURL(file);
-                const stem = slugify(file.name.replace(/\.[^.]+$/, '')) || 'photo';
-                if (lib.photos.some((p) => p.file === `${stem}.jpg`)) item.note = 'a photo with this name is already on the site';
+
             }
             queue.push(item);
         }
         renderQueue();
     }
+
+    const canUpload = (q) => q.state === 'ready' || (q.state === 'error' && q.retry);
 
     function renderQueue() {
         $('queue').replaceChildren(...queue.map((item) => {
@@ -458,13 +566,24 @@
             });
             const thumb = item.url ? el('img', { className: 'qthumb', src: item.url, alt: '' }) : el('span', { className: 'qthumb' });
             const note = item.state === 'uploading' ? 'uploading…' : item.note;
+            let anyway = null;
+            if (item.state === 'dupe') {
+                anyway = el('button', { type: 'button', className: 'link', textContent: 'upload anyway', disabled: busy });
+                anyway.addEventListener('click', () => {
+                    item.state = 'ready';
+                    item.force = true;
+                    item.note = 'will upload anyway';
+                    renderQueue();
+                });
+            }
             return el('li', { className: `qitem is-${item.state}` },
                 thumb,
                 el('span', { className: 'qname', textContent: item.file.name },
-                    note ? el('span', { className: 'qnote', textContent: note }) : null),
+                    note ? el('span', { className: 'qnote', textContent: note }) : null,
+                    anyway),
                 x);
         }));
-        const ready = queue.filter((q) => q.state !== 'error' || q.retry).length;
+        const ready = queue.filter(canUpload).length;
         $('batch').hidden = queue.length === 0;
         const up = $('upload');
         up.disabled = busy || ready === 0;
@@ -474,7 +593,8 @@
     async function upload() {
         if (busy) return;
         const tags = batchField.get();
-        const items = queue.filter((q) => q.state !== 'error' || q.retry);
+        const hidden = $('keep-hidden').checked;
+        const items = queue.filter(canUpload);
         if (!items.length) return;
         busy = true;
         let done = 0;
@@ -483,13 +603,15 @@
             renderQueue();
             try {
                 const params = new URLSearchParams({ name: item.file.name, tags: JSON.stringify(tags), at: String(done) });
+                if (hidden) params.set('hidden', '1');
+                if (item.force) params.set('force', '1');
                 setLibrary(await api(`/api/upload?${params}`, item.file, true));
                 done++;
                 if (item.url) URL.revokeObjectURL(item.url);
                 queue = queue.filter((q) => q !== item);
             } catch (err) {
-                item.state = 'error';
-                item.retry = true;
+                item.state = err.status === 409 ? 'dupe' : 'error';
+                item.retry = err.status !== 409;
                 item.note = err.message;
             }
             renderQueue();
@@ -498,16 +620,18 @@
         renderQueue();
         if (done) {
             const where = tags.length ? ` to ${tags.map(titleOf).join(', ')}` : '';
-            toast(`added ${done} photo${done === 1 ? '' : 's'}${where}`);
+            toast(`added ${done} photo${done === 1 ? '' : 's'}${where}${hidden ? ' (hidden for now)' : ''}`);
             if (!queue.length) batchField.clear();
-            if (filter && filter !== UNTAGGED && !tags.map(keyOf).includes(filter)) {
+            if (filter && filter !== (hidden ? HIDDEN : UNTAGGED) && !tags.map(keyOf).includes(filter)) {
                 filter = '';
                 renderFilter();
                 renderLibrary();
             }
         }
         const failed = queue.filter((q) => q.state === 'error' && q.retry).length;
+        const dupes = queue.filter((q) => q.state === 'dupe').length;
         if (failed) toast(`${failed} photo${failed === 1 ? '' : 's'} didn’t upload — see the list`, true);
+        else if (dupes) toast(`${dupes} photo${dupes === 1 ? ' looks' : 's look'} like ${dupes === 1 ? 'one' : 'ones'} already in the studio — see the list`, true);
     }
 
     /* Events */
@@ -542,6 +666,10 @@
     $('bulk-add').addEventListener('click', () => bulk('add'));
     $('bulk-remove').addEventListener('click', () => bulk('remove'));
     $('bulk-delete').addEventListener('click', bulkDelete);
+    $('bulk-hide').addEventListener('click', () => setHidden([...selected], true));
+    $('bulk-show').addEventListener('click', () => setHidden([...selected], false));
+    $('sort-old').addEventListener('click', () => sortByDate(false));
+    $('sort-new').addEventListener('click', () => sortByDate(true));
     $('bulk-clear').addEventListener('click', () => {
         selected.clear();
         renderLibrary();

@@ -21,8 +21,8 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import {
-    ROOT, INBOX, PHOTOS, THUMBS, IMAGE, UNSUPPORTED, collator, slugify,
-    readLibrary, writeLibrary, resolveTags, makeWebCopies, describe, ensureShareImage,
+    ROOT, INBOX, PHOTOS, STAGING, IMAGE, UNSUPPORTED, collator, slugify, fullPath, thumbPath,
+    readLibrary, writeLibrary, resolveTags, makeWebCopies, describe, ensureShareImage, inspect,
 } from './library.mjs';
 
 export { INBOX };
@@ -34,15 +34,18 @@ async function isFresh(outPath, srcStat) {
     return Boolean(s && s.mtimeMs >= srcStat.mtimeMs);
 }
 
-// photos.json <-> what's actually in src/photos/
+const jpgsIn = async (dir) => new Set(
+    (await fs.readdir(dir, { withFileTypes: true }).catch(() => []))
+        .filter((e) => e.isFile() && /\.jpg$/i.test(e.name))
+        .map((e) => e.name)
+);
+
+// the library <-> what's actually in src/photos/ (and staging/ for hidden photos)
 async function reconcile(lib, stats) {
-    const onDisk = new Set(
-        (await fs.readdir(PHOTOS, { withFileTypes: true }).catch(() => []))
-            .filter((e) => e.isFile() && /\.jpg$/i.test(e.name))
-            .map((e) => e.name)
-    );
+    const onDisk = await jpgsIn(PHOTOS);
+    const staged = await jpgsIn(STAGING);
     const before = lib.photos.length;
-    lib.photos = lib.photos.filter((p) => onDisk.has(p.file));
+    lib.photos = lib.photos.filter((p) => (p.hidden ? staged : onDisk).has(p.file));
     stats.dropped = before - lib.photos.length;
 
     const known = new Set(lib.photos.map((p) => p.file));
@@ -85,14 +88,20 @@ async function ingest(lib, force, stats) {
             const srcStat = await fs.stat(input);
             const existing = lib.photos.find((p) => p.file === name) || added.find((p) => p.file === name);
 
-            if (existing && !force && (await isFresh(path.join(PHOTOS, name), srcStat)) && (await isFresh(path.join(THUMBS, name), srcStat))) {
+            if (existing && !force && (await isFresh(fullPath(existing), srcStat)) && (await isFresh(thumbPath(existing), srcStat))) {
                 stats.skipped++;
                 continue;
             }
             try {
-                const size = await makeWebCopies(input, name);
+                const size = await makeWebCopies(input, name, { hidden: Boolean(existing?.hidden) });
                 if (existing) Object.assign(existing, size); // keep its tags
-                else added.push({ file: name, ...size, tags: folder ? resolveTags(lib, [folder]) : [] });
+                else {
+                    const { date, dhash } = await inspect(input);
+                    const photo = { file: name, ...size, tags: folder ? resolveTags(lib, [folder]) : [] };
+                    if (date) photo.date = date;
+                    if (dhash) photo.dhash = dhash;
+                    added.push(photo);
+                }
                 stats.made++;
                 console.log(`  + ${name}`);
             } catch (err) {
