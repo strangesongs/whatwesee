@@ -13,12 +13,13 @@
     const lbNext = $('lb-next');
 
     const SITE = 'what we see is what we are';
-    const LOOSE = '_loose'; // photos dropped straight into inbox/ (no album)
     const SWIPE = 40;
 
+    // photos.json: { albums: [{ slug, title }], photos: [{ file, w, h, tags: [slug] }] }
+    // Each tag is an album; a photo can be in several. '' is the "all" view.
     let albums = [];
-    let all = [];
-    let view = 'all';
+    let photos = [];
+    let view = '';
     let renderedView = null;
     let list = [];
     let idx = -1;
@@ -26,20 +27,27 @@
     let touchX = null;
     let touchY = null;
 
-    const fullSrc = (p) => `photos/${p.album}/${p.file}`;
-    const thumbSrc = (p) => `photos/${p.album}/thumbs/${p.file}`;
-    const photoHash = (p) => `#photo/${p.album}/${p.file}`;
-    const albumHash = (slug) => (slug === 'all' ? '#' : `#album/${slug}`);
-    const namedAlbums = () => albums.filter((a) => a.slug !== LOOSE);
+    const fullSrc = (p) => `photos/${p.file}`;
+    const thumbSrc = (p) => `photos/thumbs/${p.file}`;
+    const albumHash = (slug) => (slug ? `#album/${slug}` : '#');
+    const photoHash = (p) => (view ? `#album/${view}/${p.file}` : `#photo/${p.file}`);
+    // an album's own order (set on the upload page); photos not placed yet come first
+    function inAlbum(slug) {
+        const album = albums.find((a) => a.slug === slug);
+        const tagged = photos.filter((p) => p.tags.includes(slug));
+        if (!album || !Array.isArray(album.order)) return tagged;
+        const rank = new Map(album.order.map((f, i) => [f, i]));
+        return [...tagged.filter((p) => !rank.has(p.file)),
+            ...tagged.filter((p) => rank.has(p.file)).sort((a, b) => rank.get(a.file) - rank.get(b.file))];
+    }
 
     function renderNav() {
-        const named = namedAlbums();
         navEl.textContent = '';
-        navEl.hidden = named.length === 0;
-        if (!named.length) return;
+        navEl.hidden = albums.length === 0;
+        if (!albums.length) return;
 
         const ul = document.createElement('ul');
-        [{ slug: 'all', title: 'all' }, ...named].forEach((a) => {
+        [{ slug: '', title: 'all' }, ...albums].forEach((a) => {
             const li = document.createElement('li');
             if (a.slug === view) {
                 const span = document.createElement('span');
@@ -88,11 +96,11 @@
 
     function setView(slug) {
         if (slug === renderedView) return;
-        view = slug;
-        renderedView = slug;
         const album = albums.find((a) => a.slug === slug);
-        list = slug === 'all' || !album ? all : album.photos;
-        document.title = slug === 'all' ? SITE : `${album.title} — ${SITE}`;
+        view = album ? slug : '';
+        renderedView = view;
+        list = album ? inAlbum(slug) : photos;
+        document.title = album ? `${album.title} — ${SITE}` : SITE;
         renderNav();
         renderGrid();
     }
@@ -149,33 +157,41 @@
         location.hash = albumHash(view);
     }
 
-    /* Routing: #  |  #album/<slug>  |  #photo/<album>/<file> */
+    /* Routing:  #  |  #album/<tag>  |  #album/<tag>/<file>  |  #photo/<file>
+       (old links like #photo/<album>/<file> still open the photo) */
 
     function route() {
         const h = decodeURIComponent(location.hash.slice(1));
+        const byFile = (file) => photos.find((p) => p.file === file);
 
-        let m = h.match(/^photo\/([^/]+)\/(.+)$/);
-        if (m) {
-            const p = all.find((x) => x.album === m[1] && x.file === m[2]);
-            if (p) {
-                if (!list.includes(p)) setView(p.album === LOOSE ? 'all' : p.album);
-                openAt(list.indexOf(p));
-                return;
-            }
+        let m = h.match(/^album\/([^/]+)\/([^/]+)$/);
+        if (m && byFile(m[2])) {
+            const p = byFile(m[2]);
+            setView(p.tags.includes(m[1]) ? m[1] : '');
+            openAt(list.indexOf(p));
+            return;
         }
 
-        m = h.match(/^album\/(.+)$/);
+        m = h.match(/^photo\/(?:[^/]+\/)?([^/]+)$/);
+        if (m && byFile(m[1])) {
+            const p = byFile(m[1]);
+            if (!list.includes(p)) setView('');
+            openAt(list.indexOf(p));
+            return;
+        }
+
+        m = h.match(/^album\/([^/]+)$/);
         closeBox();
-        const wanted = m && namedAlbums().some((a) => a.slug === m[1]) ? m[1] : 'all';
-        setView(wanted);
+        setView(m ? m[1] : '');
     }
 
     function init(data) {
-        albums = (data.albums || []).filter((a) => a.photos && a.photos.length);
-        albums.forEach((a) => a.photos.forEach((p) => { p.album = a.slug; }));
-        all = albums.flatMap((a) => a.photos);
+        photos = (Array.isArray(data.photos) ? data.photos : [])
+            .filter((p) => p && p.file && p.w && p.h)
+            .map((p) => ({ ...p, tags: Array.isArray(p.tags) ? p.tags : [] }));
+        albums = (Array.isArray(data.albums) ? data.albums : []).filter((a) => a && a.slug && inAlbum(a.slug).length);
 
-        if (!all.length) {
+        if (!photos.length) {
             statusEl.textContent = 'no photos yet.';
             return;
         }

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>studio — what we see is what we are</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+    <header class="top">
+        <h1 class="wordmark"><a href="/" target="_blank" rel="noopener">what we see is what we are</a> <span>studio</span></h1>
+        <div class="publish">
+            <span id="pub-status" class="muted" aria-live="polite"></span>
+            <button id="publish" type="button" class="btn btn-ink" disabled>publish</button>
+        </div>
+    </header>
+
+    <div class="layout">
+        <aside class="side">
+            <section class="panel" aria-labelledby="h-add">
+                <h2 id="h-add">add photos</h2>
+                <label id="drop" class="drop">
+                    <input id="pick" type="file" accept="image/*,.heic,.heif" multiple>
+                    <span>drop photos here<br><u>or choose files</u></span>
+                </label>
+                <ul id="queue" class="queue" aria-live="polite"></ul>
+                <div id="batch" class="batch" hidden>
+                    <span class="label">tags for these photos</span>
+                    <div id="batch-tags"></div>
+                    <p class="hint">type a tag and press enter. each tag becomes an album in the sidebar. no tags = only in “all”.</p>
+                    <button id="upload" type="button" class="btn btn-ink">upload</button>
+                </div>
+            </section>
+
+            <section class="panel" aria-labelledby="h-albums">
+                <h2 id="h-albums">albums</h2>
+                <p class="hint">one per tag, in sidebar order. rename here; the link stays the same.</p>
+                <ol id="albums" class="albums"></ol>
+            </section>
+        </aside>
+
+        <main class="main">
+            <div class="lib-head">
+                <h2>on the site <span id="count" class="muted"></span></h2>
+                <p id="lib-hint" class="hint"></p>
+            </div>
+            <nav id="filter" class="filter" aria-label="Show"></nav>
+
+            <div id="bulk" class="bulk" hidden>
+                <span id="sel-count"></span>
+                <div id="bulk-tags"></div>
+                <button id="bulk-add" type="button" class="btn">add tags</button>
+                <button id="bulk-remove" type="button" class="btn">remove tags</button>
+                <button id="bulk-delete" type="button" class="btn btn-danger">take off site</button>
+                <button id="bulk-clear" type="button" class="link">clear selection</button>
+            </div>
+
+            <div id="library" class="library"></div>
+            <p id="empty" class="muted" hidden></p>
+        </main>
+    </div>
+
+    <datalist id="known-tags"></datalist>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    <script src="/admin/admin.js"></script>
+</body>
+</html>

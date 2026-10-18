@@ -1,0 +1,47 @@
+#!/bin/bash
+# whatwesee studio: opens the photo uploader in its own window.
+# The uploader's background part runs as a separate hidden app inside this one
+# ("whatwesee server.app"), so it keeps running after this launcher finishes.
+# It quits by itself 20 minutes after the window is closed.
+
+APP="$(cd "$(dirname "$0")/../.." && pwd)"
+HELPER="$APP/Contents/Resources/whatwesee server.app"
+PORT=8091
+URL="http://localhost:$PORT/admin/"
+LOG="$HOME/Library/Logs/whatwesee-studio.log"
+
+alert() {
+    osascript -e "display alert \"whatwesee studio\" message \"$1\" as critical" >/dev/null 2>&1
+}
+running() {
+    curl -sf -o /dev/null --max-time 1 "http://localhost:$PORT/api/status"
+}
+helper_alive() {
+    pgrep -f "MacOS/whatwesee-server$" >/dev/null
+}
+
+if ! running; then
+    rm -f "$LOG.failed"
+    open -g -a "$HELPER"
+    sleep 1
+    # first launch on a new Mac installs things, so allow a while
+    for _ in $(seq 1 600); do
+        running && break
+        [ -f "$LOG.failed" ] && exit 1        # the helper already explained the problem
+        helper_alive || { sleep 1; running && break; [ -f "$LOG.failed" ] && exit 1; break; }
+        sleep 0.25
+    done
+    if ! running; then
+        alert "The uploader didn't start. Details are in $LOG"
+        exit 1
+    fi
+fi
+
+# Its own window (no tabs or address bar) when a Chrome-type browser is installed.
+for b in "Google Chrome" "Brave Browser" "Microsoft Edge" "Chromium"; do
+    if [ -d "/Applications/$b.app" ] || [ -d "$HOME/Applications/$b.app" ]; then
+        open -na "$b" --args --app="$URL" --window-size=1360,900
+        exit 0
+    fi
+done
+open "$URL"

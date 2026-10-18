@@ -1,0 +1,38 @@
+#!/bin/bash
+# whatwesee server: the uploader's background part (a hidden app inside whatwesee studio).
+# Runs scripts/serve.mjs in the foreground for as long as it's up, so macOS treats it
+# as this app's own work and leaves it alone. The server quits after 20 idle minutes.
+
+HELPER="$(cd "$(dirname "$0")/../.." && pwd)"
+STUDIO="$(cd "$HELPER/../../.." && pwd)"   # whatwesee studio.app
+ROOT="$(dirname "$STUDIO")"
+[ -f "$ROOT/scripts/serve.mjs" ] || ROOT="/Users/jcrtll/Desktop/programming/whatwesee"
+LOG="$HOME/Library/Logs/whatwesee-studio.log"
+mkdir -p "$(dirname "$LOG")"
+
+fail() {
+    echo "$(date -u +%FT%TZ) $1" >>"$LOG"
+    touch "$LOG.failed"
+    osascript -e "display alert \"whatwesee studio\" message \"$1\" as critical" >/dev/null 2>&1
+    exit 1
+}
+
+[ -f "$ROOT/scripts/serve.mjs" ] || fail "Can't find the whatwesee folder. Keep whatwesee studio inside it."
+
+NODE=""
+for c in "$(/bin/zsh -lic 'command -v node' </dev/null 2>/dev/null | tail -n 1)" \
+         /opt/homebrew/bin/node /usr/local/bin/node \
+         "$HOME"/.nvm/versions/node/*/bin/node "$HOME/.volta/bin/node"; do
+    if [ -x "$c" ]; then NODE="$c"; break; fi
+done
+[ -n "$NODE" ] || fail "Node.js isn't installed on this Mac (get it from nodejs.org), then open whatwesee studio again."
+
+export PATH="$(dirname "$NODE"):/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
+cd "$ROOT" || fail "Can't open the whatwesee folder."
+
+if [ ! -d node_modules/sharp ]; then
+    npm install --no-audit --no-fund >>"$LOG" 2>&1 || fail "First-time setup failed. Details are in $LOG"
+fi
+
+export IDLE_MINUTES=20
+exec "$NODE" scripts/serve.mjs >>"$LOG" 2>&1

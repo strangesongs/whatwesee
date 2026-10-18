@@ -1,183 +1,135 @@
 #!/usr/bin/env node
-// Turns the photos you drop into inbox/ into web-ready files for the site.
+// Brings the site's photo list up to date. The upload page
+// (npm run serve -> http://localhost:8091/admin/) is the usual way to add photos;
+// this is the drop-folder way, and a tidy-up.
 //
-//   inbox/                      <- you drop photos here (local only, never committed)
-//     sunset.jpg                   loose photo: shown in "all"
-//     chicago/                     a folder becomes an album
-//       01.jpg
-//   src/photos/<album>/*.jpg    <- generated: 2048px web copies (+ thumbs/)
-//   src/photos.json             <- generated: what the gallery page reads
+//   inbox/                      <- optional: drop originals here (local only, never committed)
+//     sunset.jpg                   added with no tags (shown under "all")
+//     chicago/01.jpg               added with the tag "chicago"
+//   src/photos/*.jpg            <- generated: 2048px web copies (+ thumbs/)
+//   src/photos.json             <- the photos, their tags, album names and order
+//
+// It also drops photos.json entries whose image was deleted, adds images put in
+// src/photos/ by hand, and moves the old folder-per-album layout over to tags.
 //
 // Usage: node scripts/build.mjs [--force] [--ship]
-//   --force  regenerate every image, even if it looks up to date
+//   --force  regenerate every image from inbox/, even if it looks up to date
 //   --ship   after building, commit src/ and push (what GitHub Pages deploys)
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import sharp from 'sharp';
+import { pathToFileURL } from 'node:url';
+import {
+    ROOT, INBOX, PHOTOS, THUMBS, IMAGE, UNSUPPORTED, collator, slugify,
+    readLibrary, writeLibrary, resolveTags, makeWebCopies, describe, ensureShareImage,
+} from './library.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const INBOX = path.join(ROOT, 'inbox');
-const OUT = path.join(ROOT, 'src', 'photos');
-const MANIFEST = path.join(ROOT, 'src', 'photos.json');
+export { INBOX };
 
-const FULL = 2048; // long edge of the viewer image
-const THUMB = 800; // long edge of the grid image
-const LOOSE = '_loose'; // photos dropped straight into inbox/
-
-const IMAGE = /\.(jpe?g|png|webp|tiff?|gif|avif)$/i;
-const UNSUPPORTED = /\.(heic|heif|raw|cr2|cr3|nef|arw|dng|psd)$/i;
-const collator = new Intl.Collator('en', { numeric: true });
-
-const slugify = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'photo';
 const statOrNull = (p) => fs.stat(p).then((s) => s, () => null);
-const isHidden = (name) => name.startsWith('.') || name.startsWith('_');
 
 async function isFresh(outPath, srcStat) {
     const s = await statOrNull(outPath);
     return Boolean(s && s.mtimeMs >= srcStat.mtimeMs);
 }
 
-async function ingestFolder(srcDir, slug, force, stats) {
-    const entries = await fs.readdir(srcDir, { withFileTypes: true });
-    const files = entries.filter((e) => e.isFile() && !e.name.startsWith('.'));
+// photos.json <-> what's actually in src/photos/
+async function reconcile(lib, stats) {
+    const onDisk = new Set(
+        (await fs.readdir(PHOTOS, { withFileTypes: true }).catch(() => []))
+            .filter((e) => e.isFile() && /\.jpg$/i.test(e.name))
+            .map((e) => e.name)
+    );
+    const before = lib.photos.length;
+    lib.photos = lib.photos.filter((p) => onDisk.has(p.file));
+    stats.dropped = before - lib.photos.length;
 
-    for (const f of files) {
-        if (UNSUPPORTED.test(f.name)) stats.unsupported.push(path.join(path.basename(srcDir), f.name));
-    }
-
-    const names = files.map((e) => e.name).filter((n) => IMAGE.test(n)).sort(collator.compare);
-    const used = new Set();
-
-    for (const file of names) {
-        const base = slugify(path.parse(file).name);
-        let name = base;
-        for (let n = 2; used.has(name); n++) name = `${base}-${n}`;
-        used.add(name);
-
-        const input = path.join(srcDir, file);
-        const srcStat = await fs.stat(input);
-        const out = path.join(OUT, slug, `${name}.jpg`);
-        const thumb = path.join(OUT, slug, 'thumbs', `${name}.jpg`);
-
-        if (!force && (await isFresh(out, srcStat)) && (await isFresh(thumb, srcStat))) {
-            stats.skipped++;
-            continue;
-        }
-
+    const known = new Set(lib.photos.map((p) => p.file));
+    for (const file of [...onDisk].sort(collator.compare)) {
+        if (known.has(file)) continue;
         try {
-            await fs.mkdir(path.dirname(thumb), { recursive: true });
-            // rotate() bakes in the EXIF orientation; sharp drops all metadata
-            // (including GPS location) from the output by default.
-            const make = (size, dest, quality) =>
-                sharp(input, { failOn: 'none' })
-                    .rotate()
-                    .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
-                    .jpeg({ quality, mozjpeg: true })
-                    .toFile(dest);
-            await make(FULL, out, 82);
-            await make(THUMB, thumb, 78);
-            stats.made++;
-            console.log(`  + ${slug === LOOSE ? '' : slug + '/'}${name}.jpg`);
+            lib.photos.push({ file, ...(await describe(file)), tags: [] });
+            stats.found++;
         } catch (err) {
-            stats.failed.push(`${path.basename(srcDir)}/${file}: ${err.message}`);
+            stats.failed.push(`src/photos/${file}: ${err.message}`);
         }
     }
 }
 
-async function ingest(force) {
-    const stats = { made: 0, skipped: 0, failed: [], unsupported: [] };
+// Loose files in inbox/ get no tags; files in inbox/<folder>/ get the folder's name as a tag.
+async function ingest(lib, force, stats) {
     await fs.mkdir(INBOX, { recursive: true });
-
-    await ingestFolder(INBOX, LOOSE, force, stats);
-
-    const entries = await fs.readdir(INBOX, { withFileTypes: true });
-    for (const e of entries) {
-        if (!e.isDirectory() || isHidden(e.name)) continue;
-        await ingestFolder(path.join(INBOX, e.name), slugify(e.name), force, stats);
-    }
-    return stats;
-}
-
-async function readJson(file, fallback) {
-    try {
-        return JSON.parse(await fs.readFile(file, 'utf8'));
-    } catch {
-        return fallback;
-    }
-}
-
-async function writeManifest() {
-    const dirs = (await fs.readdir(OUT, { withFileTypes: true }).catch(() => []))
-        .filter((d) => d.isDirectory() && !d.name.startsWith('.'))
-        .map((d) => d.name);
-
-    const order = await readJson(path.join(OUT, 'order.json'), []);
-    const rank = (s) => (s === LOOSE ? -1 : order.includes(s) ? order.indexOf(s) : 1e6);
-    dirs.sort((a, b) => rank(a) - rank(b) || collator.compare(a, b));
-
-    const albums = [];
-    for (const slug of dirs) {
-        const dir = path.join(OUT, slug);
-        const files = (await fs.readdir(dir)).filter((f) => /\.jpg$/i.test(f)).sort(collator.compare);
-        if (!files.length) continue;
-
-        const photos = [];
-        for (const file of files) {
-            const m = await sharp(path.join(dir, file)).metadata();
-            photos.push({ file, w: m.width, h: m.height });
+    const groups = [{ dir: INBOX, folder: null }];
+    for (const e of await fs.readdir(INBOX, { withFileTypes: true })) {
+        if (e.isDirectory() && !e.name.startsWith('.') && !e.name.startsWith('_')) {
+            groups.push({ dir: path.join(INBOX, e.name), folder: e.name });
         }
-        const meta = await readJson(path.join(dir, 'album.json'), {});
-        albums.push({ slug, title: meta.title || (slug === LOOSE ? 'unsorted' : slug), photos });
     }
 
-    const next = JSON.stringify({ albums }, null, 1) + '\n';
-    const prev = await fs.readFile(MANIFEST, 'utf8').catch(() => '');
-    if (next === prev) return { changed: false, albums };
-    await fs.writeFile(MANIFEST, next);
-    return { changed: true, albums };
-}
+    const added = [];
+    for (const { dir, folder } of groups) {
+        const files = (await fs.readdir(dir, { withFileTypes: true }))
+            .filter((e) => e.isFile() && !e.name.startsWith('.'))
+            .map((e) => e.name)
+            .sort(collator.compare);
 
-// Share-preview image (og.jpg, 1200x630). Made once from the first landscape photo;
-// delete src/og.jpg to regenerate it, or drop in your own 1200x630 JPEG.
-async function ensureShareImage(manifest) {
-    const target = path.join(ROOT, 'src', 'og.jpg');
-    if (await fs.stat(target).catch(() => null)) return;
-    const album = manifest.albums.find((a) => a.photos.length);
-    if (!album) return;
-    const pick = album.photos.find((p) => p.w > p.h) || album.photos[0];
-    await sharp(path.join(OUT, album.slug, pick.file))
-        .resize(1200, 630, { fit: 'cover', position: 'attention' })
-        .jpeg({ quality: 82, mozjpeg: true })
-        .toFile(target);
-    console.log('made src/og.jpg (share preview)');
+        for (const file of files) {
+            const label = folder ? `${folder}/${file}` : file;
+            if (UNSUPPORTED.test(file)) stats.unsupported.push(label);
+            if (!IMAGE.test(file)) continue;
+
+            const stem = slugify(path.parse(file).name) || 'photo';
+            const name = `${folder ? `${slugify(folder)}-` : ''}${stem}.jpg`;
+            const input = path.join(dir, file);
+            const srcStat = await fs.stat(input);
+            const existing = lib.photos.find((p) => p.file === name) || added.find((p) => p.file === name);
+
+            if (existing && !force && (await isFresh(path.join(PHOTOS, name), srcStat)) && (await isFresh(path.join(THUMBS, name), srcStat))) {
+                stats.skipped++;
+                continue;
+            }
+            try {
+                const size = await makeWebCopies(input, name);
+                if (existing) Object.assign(existing, size); // keep its tags
+                else added.push({ file: name, ...size, tags: folder ? resolveTags(lib, [folder]) : [] });
+                stats.made++;
+                console.log(`  + ${name}`);
+            } catch (err) {
+                stats.failed.push(`${label}: ${err.message}`);
+            }
+        }
+    }
+    lib.photos.unshift(...added); // newest first
 }
 
 export async function build({ force = false } = {}) {
-    const stats = await ingest(force);
-    const manifest = await writeManifest();
-    await ensureShareImage(manifest);
+    const stats = { made: 0, skipped: 0, found: 0, dropped: 0, failed: [], unsupported: [] };
+    const lib = await readLibrary();
+    await reconcile(lib, stats);
+    await ingest(lib, force, stats);
+    const changed = await writeLibrary(lib);
+    await ensureShareImage(lib);
 
-    const total = manifest.albums.reduce((n, a) => n + a.photos.length, 0);
-    const named = manifest.albums.filter((a) => a.slug !== LOOSE).length;
+    const albums = lib.albums.length;
     console.log(
-        `${stats.made} new, ${stats.skipped} unchanged — ${total} photos on the site` +
-        (named ? ` in ${named} album${named === 1 ? '' : 's'}` : '')
+        `${stats.made} new from inbox, ${stats.skipped} unchanged — ${lib.photos.length} photos on the site` +
+        (albums ? ` in ${albums} album${albums === 1 ? '' : 's'}` : '')
     );
+    if (stats.found) console.log(`picked up ${stats.found} photo(s) found in src/photos/`);
+    if (stats.dropped) console.log(`removed ${stats.dropped} missing photo(s) from the list`);
     if (stats.unsupported.length) {
         console.warn(`skipped (export these as JPEG first): ${stats.unsupported.join(', ')}`);
     }
     if (stats.failed.length) {
         console.warn(`could not process:\n  ${stats.failed.join('\n  ')}`);
     }
-    return { changed: stats.made > 0 || manifest.changed, stats };
+    return { changed: stats.made > 0 || changed, stats };
 }
 
 export function ship() {
     const git = (args, opts = {}) => execFileSync('git', args, { cwd: ROOT, stdio: 'inherit', ...opts });
-    git(['add', '--', 'src']);
+    git(['add', '-A', '--', 'src']);
     try {
         execFileSync('git', ['diff', '--cached', '--quiet', '--', 'src'], { cwd: ROOT });
         console.log('nothing new to publish');
@@ -194,5 +146,5 @@ const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv
 if (isMain) {
     const args = process.argv.slice(2);
     const result = await build({ force: args.includes('--force') });
-    if (args.includes('--ship') && result.changed) ship();
+    if (args.includes('--ship')) ship();
 }
