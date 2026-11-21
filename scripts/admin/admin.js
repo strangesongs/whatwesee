@@ -584,7 +584,10 @@
         for (const file of files) {
             if (queue.some((q) => q.file.name === file.name && q.file.size === file.size)) continue;
             const item = { file, url: null, state: 'ready', note: '' };
-            if (UNSUPPORTED.test(file.name)) {
+            if (/\.(heic|heif)$/i.test(file.name)) {
+                // converted to JPEG by the studio on upload; most browsers can't preview it
+                item.note = 'iPhone photo: becomes a JPEG on upload';
+            } else if (UNSUPPORTED.test(file.name)) {
                 item.state = 'error';
                 item.note = 'export as JPEG first — this format can’t be read';
             } else if (!IMAGE.test(file.name)) {

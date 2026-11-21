@@ -21,7 +21,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import {
-    ROOT, INBOX, PHOTOS, STAGING, IMAGE, UNSUPPORTED, collator, slugify, fullPath, thumbPath,
+    ROOT, INBOX, PHOTOS, STAGING, IMAGE, UNSUPPORTED, HEIC, readable, heicToJpeg, collator, slugify, fullPath, thumbPath,
     readLibrary, writeLibrary, resolveTags, makeWebCopies, describe, ensureShareImage, inspect,
 } from './library.mjs';
 
@@ -79,8 +79,8 @@ async function ingest(lib, force, stats) {
 
         for (const file of files) {
             const label = folder ? `${folder}/${file}` : file;
-            if (UNSUPPORTED.test(file)) stats.unsupported.push(label);
-            if (!IMAGE.test(file)) continue;
+            if (UNSUPPORTED.test(file) && !readable(file)) stats.unsupported.push(label);
+            if (!readable(file)) continue;
 
             const stem = slugify(path.parse(file).name) || 'photo';
             const name = `${folder ? `${slugify(folder)}-` : ''}${stem}.jpg`;
@@ -93,10 +93,11 @@ async function ingest(lib, force, stats) {
                 continue;
             }
             try {
-                const size = await makeWebCopies(input, name, { hidden: Boolean(existing?.hidden) });
+                const source = HEIC.test(file) ? await heicToJpeg(input) : input;
+                const size = await makeWebCopies(source, name, { hidden: Boolean(existing?.hidden) });
                 if (existing) Object.assign(existing, size); // keep its tags
                 else {
-                    const { date, dhash } = await inspect(input);
+                    const { date, dhash } = await inspect(source);
                     const photo = { file: name, ...size, tags: folder ? resolveTags(lib, [folder]) : [] };
                     if (date) photo.date = date;
                     if (dhash) photo.dhash = dhash;

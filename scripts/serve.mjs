@@ -12,7 +12,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-    SRC, STAGING, IMAGE, UNSUPPORTED,
+    SRC, STAGING, IMAGE, UNSUPPORTED, HEIC, canReadHeic, heicToJpeg,
     withLibrary, readLibrary, resolveTags, makeWebCopies, uniqueName, ensureShareImage,
     inspect, findDuplicate, setHidden, removePhotos, sortByDate, mergeAlbums, backfill,
     hasUnpublished, publish, cleanNote,
@@ -87,10 +87,11 @@ const routes = {
     // ?name=<original file name>&tags=<json list>&at=<position>&hidden=1&force=1
     'POST /api/upload': async (req, url) => {
         const original = url.searchParams.get('name') || 'photo.jpg';
-        if (UNSUPPORTED.test(original)) {
+        const isHeic = canReadHeic && HEIC.test(original);
+        if (UNSUPPORTED.test(original) && !isHeic) {
             throw new HttpError(415, `${path.extname(original).slice(1).toUpperCase()} files can't be read here — export as JPEG first`);
         }
-        if (!IMAGE.test(original)) throw new HttpError(415, 'not a photo (use JPEG, PNG, WebP, TIFF)');
+        if (!IMAGE.test(original) && !isHeic) throw new HttpError(415, 'not a photo (use JPEG, PNG, WebP, TIFF)');
         let tags;
         try {
             tags = list(JSON.parse(url.searchParams.get('tags') || '[]'));
@@ -100,8 +101,15 @@ const routes = {
         const at = Math.max(0, Number(url.searchParams.get('at')) || 0);
         const hidden = url.searchParams.get('hidden') === '1';
         const force = url.searchParams.get('force') === '1';
-        const body = await readBody(req, MAX_UPLOAD);
+        let body = await readBody(req, MAX_UPLOAD);
         if (!body.length) throw new HttpError(400, 'empty file');
+        if (isHeic) {
+            try {
+                body = await heicToJpeg(body);
+            } catch (err) {
+                throw new HttpError(422, err.message);
+            }
+        }
 
         const { date, dhash } = await inspect(body);
         const lib = await withLibrary(async (lib) => {

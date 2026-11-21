@@ -18,6 +18,7 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +37,33 @@ const THUMB = 800; // long edge of the grid image
 
 export const IMAGE = /\.(jpe?g|png|webp|tiff?|gif|avif)$/i;
 export const UNSUPPORTED = /\.(heic|heif|raw|cr2|cr3|nef|arw|dng|psd)$/i;
+// iPhone photos. sharp can't decode them, but macOS can (sips), so on a Mac they're
+// turned into a JPEG first (EXIF, including the date taken, comes along).
+export const HEIC = /\.(heic|heif)$/i;
+export const canReadHeic = process.platform === 'darwin';
+export const readable = (name) => IMAGE.test(name) || (canReadHeic && HEIC.test(name));
+
+const execFileP = promisify(execFile);
+
+// HEIC file path or buffer -> JPEG buffer.
+export async function heicToJpeg(input) {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'whatwesee-heic-'));
+    try {
+        let src = input;
+        if (Buffer.isBuffer(input)) {
+            src = path.join(dir, 'in.heic');
+            await fs.writeFile(src, input);
+        }
+        const out = path.join(dir, 'out.jpg');
+        await execFileP('/usr/bin/sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '95', src, '--out', out]);
+        return await fs.readFile(out);
+    } catch (err) {
+        throw new Error(`couldn't convert this iPhone photo (${String(err.stderr || err.message).trim().split('\n')[0]})`);
+    } finally {
+        await fs.rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
+}
+
 export const collator = new Intl.Collator('en', { numeric: true });
 
 export const slugify = (s) =>
@@ -469,7 +497,7 @@ export async function backfill() {
     const originals = new Map();
     const scan = async (dir, prefix) => {
         for (const e of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
-            if (e.isFile() && IMAGE.test(e.name)) {
+            if (e.isFile() && readable(e.name)) {
                 originals.set(`${prefix}${slugify(path.parse(e.name).name) || 'photo'}.jpg`, path.join(dir, e.name));
             } else if (e.isDirectory() && !prefix && !e.name.startsWith('.') && !e.name.startsWith('_')) {
                 await scan(path.join(dir, e.name), `${slugify(e.name)}-`);
@@ -482,7 +510,8 @@ export async function backfill() {
     await withLibrary(async (lib) => {
         for (const p of lib.photos) {
             if (!p.date && originals.has(p.file)) {
-                const { date } = await inspect(originals.get(p.file));
+                const original = originals.get(p.file);
+                const { date } = await inspect(HEIC.test(original) ? await heicToJpeg(original) : original).catch(() => ({}));
                 if (date) {
                     p.date = date;
                     filled++;

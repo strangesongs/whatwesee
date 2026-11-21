@@ -38,6 +38,9 @@ The app normally lives in the project root (falls back to the absolute path if m
    uploads (409 + "upload anyway"), renames/reorders albums, writes album notes, and deletes photos.
 3. "publish" on that page = `git add -A && git commit -m "update photos" && git push` (whole repo, not just src/).
 
+iPhone photos (HEIC/HEIF) work in both paths: on a Mac they're converted to JPEG with `/usr/bin/sips` first (`heicToJpeg` in
+`scripts/library.mjs`; sharp can't decode HEVC). RAW/PSD still need exporting.
+
 Optional drop folder: `inbox/` (no tags) and `inbox/<name>/` (tagged `<name>`), then `npm run build`.
 `inbox/` is git-ignored and exists only on this computer. The upload page doesn't copy originals anywhere.
 Only the resized copies (2048px full, 800px thumb, ~420 KB per photo, metadata/GPS stripped) are committed.
