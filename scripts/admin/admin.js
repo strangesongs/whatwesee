@@ -1,4 +1,4 @@
-// Upload page: add photos with tags, retag, reorder, dates, hide/show, merge albums, publish.
+// Upload page: add photos with tags, retag, reorder, dates, hide/show, merge albums, album notes, publish.
 // Talks to the small API in scripts/serve.mjs.
 (() => {
     'use strict';
@@ -241,12 +241,57 @@
                 });
                 return b;
             };
+            const mark = el('span', { className: 'has-note', textContent: a.note ? '¶' : '', title: a.note ? 'has a note' : '' });
+            if (a.note) mark.setAttribute('aria-label', 'has a note');
             return el('li', { className: 'album' },
                 name,
+                mark,
                 el('span', { className: 'n', textContent: countFor(a.slug), title: 'photos' }),
                 el('span', { className: 'moves' }, move(-1, 'move up'), move(1, 'move down')));
         }));
     }
+
+    /* Album note: shown when one album is picked under "photos" */
+
+    function renderNote() {
+        const box = $('note-box');
+        const area = $('note');
+        const album = isAlbum() ? lib.albums.find((a) => a.slug === filter) : null;
+        box.hidden = !album;
+        if (!album) { area.dataset.slug = ''; return; }
+        $('note-label').textContent = `note for “${album.title}”`;
+        // don't overwrite what's being typed
+        if (document.activeElement === area && area.dataset.slug === album.slug) return;
+        area.dataset.slug = album.slug;
+        area.value = album.note || '';
+    }
+
+    async function saveNote() {
+        const area = $('note');
+        const slug = area.dataset.slug;
+        const album = lib.albums.find((a) => a.slug === slug);
+        if (!album) return;
+        const note = area.value.trim();
+        if (note === (album.note || '')) return;
+        try {
+            setLibrary(await api('/api/albums', {
+                albums: lib.albums.map((a) => (a.slug === slug ? { slug, title: a.title, note } : { slug: a.slug, title: a.title })),
+            }));
+            toast(note ? `note saved for “${album.title}”` : `note removed from “${album.title}”`);
+        } catch (err) {
+            toast(err.message, true);
+        }
+    }
+
+    $('note').addEventListener('change', saveNote);
+    $('note').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('note').blur();
+        if (e.key === 'Escape') {
+            const album = lib.albums.find((a) => a.slug === $('note').dataset.slug);
+            $('note').value = album?.note || '';
+            $('note').blur();
+        }
+    });
 
     function renderFilter() {
         const items = [
@@ -478,6 +523,7 @@
                     ? 'hidden photos stay here but aren’t on the site (or on GitHub). “show” puts one back.'
                     : 'drag photos to set the order of “all”. click a photo to select it for tagging in bulk.';
         $('sort').hidden = !(filter === '' || isAlbum()) || photos.length < 2;
+        renderNote();
         $('library').replaceChildren(...photos.map(card));
         $('library').classList.toggle('is-selecting', selected.size > 0);
         $('count').textContent = countText();

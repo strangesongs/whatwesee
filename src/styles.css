@@ -159,6 +159,40 @@ main {
     transition: opacity 600ms ease;
 }
 
+/* An album's note (from the studio), above its photos. Fades in like the photos. */
+.album-note {
+    max-width: 34em;
+    margin: 0 0 40px;
+    opacity: 0;
+    transition: opacity 600ms ease;
+}
+
+.album-note.is-loaded {
+    opacity: 1;
+}
+
+.album-note[hidden] {
+    display: none;
+}
+
+.album-note p {
+    margin: 0;
+}
+
+.album-note p + p {
+    margin-top: 0.8em;
+}
+
+.album-note a {
+    text-decoration: underline;
+    text-decoration-color: rgba(17, 17, 17, 0.3);
+    text-underline-offset: 3px;
+}
+
+.album-note a:hover {
+    text-decoration-color: currentColor;
+}
+
 /* fade each photo in as it finishes loading (class added by app.js) */
 .tile img.fade {
     opacity: 0;
@@ -295,6 +329,10 @@ main {
         order: 3;
         flex: 1 1 100%;
         padding: 24px 16px 40px;
+    }
+
+    .album-note {
+        margin-bottom: 24px;
     }
 
     .contact {

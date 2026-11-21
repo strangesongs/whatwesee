@@ -35,7 +35,7 @@ The app normally lives in the project root (falls back to the absolute path if m
 2. Drop photos, type tags, upload. The page also retags, bulk-tags, reorders photos (drag; in an album view
    this sets that album's own `order`, otherwise the order of "all"), sorts by date, edits dates, hides/shows
    (moves files between src/photos and staging), merges albums (rename to an existing name), warns on duplicate
-   uploads (409 + "upload anyway"), renames/reorders albums, and deletes photos.
+   uploads (409 + "upload anyway"), renames/reorders albums, writes album notes, and deletes photos.
 3. "publish" on that page = `git add -A && git commit -m "update photos" && git push` (whole repo, not just src/).
 
 Optional drop folder: `inbox/` (no tags) and `inbox/<name>/` (tagged `<name>`), then `npm run build`.
@@ -54,8 +54,9 @@ Only the resized copies (2048px full, 800px thumb, ~420 KB per photo, metadata/G
 - `src/` is the entire site. `src/index.html`, `app.js`, `styles.css`; paths are relative because it lives under `/whatwesee/`.
 - Photos are flat: `src/photos/<file>.jpg` + `src/photos/thumbs/<file>.jpg`. Hidden photos: `staging/<file>.jpg` (+ thumbs).
 - The library (source of truth) is `staging/library.json` (git-ignored, local only):
-  `{ albums: [{slug, title, order?}], photos: [{file, w, h, tags, date?, hidden?, dhash?}] }`. `albums` = sidebar
-  order/names, `order` = that album's own photo order; `photos` = order of "all" (newest uploads first);
+  `{ albums: [{slug, title, order?, note?}], photos: [{file, w, h, tags, date?, hidden?, dhash?}] }`. `albums` = sidebar
+  order/names, `order` = that album's own photo order, `note` = plain text shown above that album's photos on the site
+  (blank line = new paragraph, URLs auto-linked; written on the upload page when that album is picked under "photos"); `photos` = order of "all" (newest uploads first);
   `date` = taken (EXIF DateTimeOriginal, or typed); `dhash` = 64-bit perceptual hash for duplicate warnings.
 - `src/photos.json` is the public subset written alongside it (non-hidden photos; file/w/h/tags/date only; album
   orders filtered). If it's newer than the local file (git pull, older studio), `readLibrary` takes it and keeps the

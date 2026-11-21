@@ -37,7 +37,7 @@
 
             <section class="panel" aria-labelledby="h-albums">
                 <h2 id="h-albums">albums</h2>
-                <p class="hint">one per tag, in sidebar order. rename here; the link stays the same. rename one to another album’s name to merge them.</p>
+                <p class="hint">one per tag, in sidebar order. rename here; the link stays the same. rename one to another album’s name to merge them. ¶ = has a note (pick the album under “photos” to write one).</p>
                 <ol id="albums" class="albums"></ol>
             </section>
         </aside>
@@ -49,6 +49,12 @@
                 <p id="sort" class="sort hint" hidden>sort by date taken: <button id="sort-old" type="button" class="link">oldest first</button> · <button id="sort-new" type="button" class="link">newest first</button></p>
             </div>
             <nav id="filter" class="filter" aria-label="Show"></nav>
+
+            <div id="note-box" class="note-box" hidden>
+                <label id="note-label" for="note" class="label"></label>
+                <textarea id="note" rows="3" maxlength="4000" placeholder="a few words about this album (optional)"></textarea>
+                <p class="hint">shown above this album’s photos on the site. a blank line starts a new paragraph; web addresses become links. saves when you click away. leave empty for no note.</p>
+            </div>
 
             <div id="bulk" class="bulk" hidden>
                 <span id="sel-count"></span>

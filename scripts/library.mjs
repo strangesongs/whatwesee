@@ -293,6 +293,7 @@ export function mergeAlbums(lib, from, into) {
         if (!order.includes(p.file)) order.push(p.file);
     }
     b.order = order;
+    if (a.note && !b.note) b.note = a.note;
     return true;
 }
 
@@ -355,9 +356,18 @@ function normalize(data) {
         .map((a) => {
             const album = { slug: a.slug, title: String(a.title || a.slug) };
             if (Array.isArray(a.order)) album.order = a.order.filter((f) => typeof f === 'string');
+            const note = cleanNote(a.note);
+            if (note) album.note = note;
             return album;
         });
     return { albums, photos };
+}
+
+// An album's note: plain text shown above its photos. Blank line = new paragraph.
+export const NOTE_MAX = 4000;
+export function cleanNote(v) {
+    if (typeof v !== 'string') return '';
+    return v.replace(/\r\n?/g, '\n').replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n').trim().slice(0, NOTE_MAX);
 }
 
 async function readJsonFile(file, label) {
@@ -426,6 +436,7 @@ export async function writeLibrary(lib) {
             .filter((a) => shown.some((p) => p.tags.includes(a.slug)))
             .map((a) => {
                 const album = { slug: a.slug, title: a.title };
+                if (a.note) album.note = a.note;
                 const order = a.order?.filter((f) => onSite.has(f));
                 if (order?.length) album.order = order;
                 return album;

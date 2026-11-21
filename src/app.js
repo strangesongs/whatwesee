@@ -4,6 +4,7 @@
     const $ = (id) => document.getElementById(id);
     const navEl = $('album-nav');
     const galleryEl = $('gallery');
+    const noteEl = $('album-note');
     const statusEl = $('status');
     const lb = $('lightbox');
     const lbImg = $('lb-img');
@@ -15,7 +16,7 @@
     const SITE = 'what we see is what we are';
     const SWIPE = 40;
 
-    // photos.json: { albums: [{ slug, title }], photos: [{ file, w, h, tags: [slug] }] }
+    // photos.json: { albums: [{ slug, title, note? }], photos: [{ file, w, h, tags: [slug] }] }
     // Each tag is an album; a photo can be in several. '' is the "all" view.
     let albums = [];
     let photos = [];
@@ -94,6 +95,37 @@
         galleryEl.appendChild(frag);
     }
 
+    // An album's note: plain text. Blank line = new paragraph, line break kept,
+    // web addresses become links. Built from text nodes, never HTML.
+    const URL_RE = /(https?:\/\/[^\s<>"]+[^\s<>".,;:!?)\]'])/g;
+    function renderNote(album) {
+        noteEl.textContent = '';
+        noteEl.classList.remove('is-loaded');
+        const text = album && typeof album.note === 'string' ? album.note.trim() : '';
+        noteEl.hidden = !text;
+        if (!text) return;
+        for (const para of text.split(/\n\s*\n/)) {
+            const p = document.createElement('p');
+            para.split('\n').forEach((line, i) => {
+                if (i) p.appendChild(document.createElement('br'));
+                line.split(URL_RE).forEach((part, j) => {
+                    if (!part) return;
+                    if (j % 2) {
+                        const a = document.createElement('a');
+                        a.href = part;
+                        a.textContent = part.replace(/^https?:\/\//, '');
+                        a.rel = 'noopener';
+                        p.appendChild(a);
+                    } else {
+                        p.appendChild(document.createTextNode(part));
+                    }
+                });
+            });
+            noteEl.appendChild(p);
+        }
+        requestAnimationFrame(() => requestAnimationFrame(() => noteEl.classList.add('is-loaded')));
+    }
+
     function setView(slug) {
         if (slug === renderedView) return;
         const album = albums.find((a) => a.slug === slug);
@@ -102,6 +134,7 @@
         list = album ? inAlbum(slug) : photos;
         document.title = album ? `${album.title} — ${SITE}` : SITE;
         renderNav();
+        renderNote(album);
         renderGrid();
     }
 

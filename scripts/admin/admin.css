@@ -262,7 +262,7 @@ h2 {
 .albums:empty::before { content: "no albums yet — tag a photo to make one."; color: var(--muted); font-size: 12px; }
 .album {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     align-items: center;
     gap: 8px;
     padding: 4px 0;
@@ -288,6 +288,27 @@ h2 {
 }
 .album .moves button:hover:not(:disabled) { color: var(--ink); }
 .album .moves button:disabled { color: var(--line); cursor: default; }
+
+.album .has-note { font-size: 12px; color: var(--muted); min-width: 1ch; }
+
+/* Album note */
+.note-box { max-width: 640px; margin: 0 0 22px; }
+.note-box[hidden] { display: none; }
+.note-box .label { color: var(--ink); font-weight: 500; }
+.note-box textarea {
+    display: block;
+    width: 100%;
+    min-height: 4.8em;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    line-height: 1.6;
+    resize: vertical;
+}
+.note-box textarea:hover { border-color: var(--faint); }
+.note-box textarea:focus { border-color: var(--ink); background: #fff; outline: none; }
 
 /* Library */
 .lib-head { margin-bottom: 14px; }

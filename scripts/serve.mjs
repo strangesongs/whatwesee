@@ -15,7 +15,7 @@ import {
     SRC, STAGING, IMAGE, UNSUPPORTED,
     withLibrary, readLibrary, resolveTags, makeWebCopies, uniqueName, ensureShareImage,
     inspect, findDuplicate, setHidden, removePhotos, sortByDate, mergeAlbums, backfill,
-    hasUnpublished, publish,
+    hasUnpublished, publish, cleanNote,
 } from './library.mjs';
 
 const ADMIN = path.join(path.dirname(fileURLToPath(import.meta.url)), 'admin');
@@ -210,7 +210,7 @@ const routes = {
         });
     },
 
-    // { albums: [{ slug, title }] }: album names and sidebar order
+    // { albums: [{ slug, title, note? }] }: album names, notes and sidebar order
     'POST /api/albums': async (req) => {
         const body = await readJson(req);
         return withLibrary((lib) => {
@@ -221,6 +221,11 @@ const routes = {
                 if (!album || next.includes(album)) continue;
                 const title = String(a.title ?? '').trim().replace(/\s+/g, ' ');
                 if (title) album.title = title;
+                if (typeof a.note === 'string') {
+                    const note = cleanNote(a.note);
+                    if (note) album.note = note;
+                    else delete album.note;
+                }
                 next.push(album);
             }
             lib.albums = [...next, ...lib.albums.filter((a) => !next.includes(a))];
