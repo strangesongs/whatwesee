@@ -265,8 +265,39 @@ main {
     gap: 28px;
 }
 
+.lb-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 28px;
+    min-width: 0;
+}
+
 .lb-count {
     color: var(--muted);
+}
+
+/* albums the open photo is in: links back to each album (and its note) */
+.lb-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 18px;
+}
+
+.lb-tags[hidden] {
+    display: none;
+}
+
+.lb-tags a {
+    color: var(--muted);
+    transition: color 120ms ease;
+}
+
+.lb-tags a:hover {
+    color: var(--ink);
+}
+
+.lb-tags [aria-current] {
+    color: var(--ink);
 }
 
 .lb-stage {
@@ -348,7 +379,26 @@ main {
 
     .lb-bar {
         order: 2;
+        flex-wrap: wrap;
         padding: 8px 0 0;
+    }
+
+    /* album links get their own row under the controls */
+    .lb-meta {
+        display: contents;
+    }
+
+    .lb-tags {
+        order: 3;
+        flex: 1 1 100%;
+        justify-content: center;
+        gap: 0 22px;
+    }
+
+    .lb-tags a,
+    .lb-tags [aria-current] {
+        display: inline-block;
+        padding: 12px 0;
     }
 
     .lb-bar button {

@@ -45,7 +45,10 @@
     <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
         <div class="lb-bar">
             <button id="lb-close" type="button">close</button>
-            <span id="lb-count" class="lb-count" aria-live="polite"></span>
+            <span class="lb-meta">
+                <span id="lb-count" class="lb-count" aria-live="polite"></span>
+                <nav id="lb-tags" class="lb-tags" aria-label="Albums this photo is in"></nav>
+            </span>
             <span class="lb-steps">
                 <button id="lb-prev" type="button">&larr; prev</button>
                 <button id="lb-next" type="button">next &rarr;</button>

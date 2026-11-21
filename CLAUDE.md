@@ -64,6 +64,7 @@ Only the resized copies (2048px full, 800px thumb, ~420 KB per photo, metadata/G
 - On server start, `backfill()` fills missing `dhash` and missing dates from originals in `inbox/`.
 - `scripts/library.mjs` also migrates the old folder-per-album layout (`src/photos/<album>/`) to tags on first read.
 - Routing is hash-based: `#`, `#album/<tag>`, `#album/<tag>/<file>`, `#photo/<file>` (old `#photo/<album>/<file>` links still work).
+- The photo viewer's bar lists the albums the open photo is in (current one in ink, others link to that album and its note).
 - Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size).
 - Font: Archivo variable, self-hosted in `src/fonts/` (OFL). No external requests. `src/fonts/Archivo/` is the full download, git-ignored.
 - Mobile (<=860px): stacked header, 44px tap targets, viewer controls at the bottom, swipe to navigate.

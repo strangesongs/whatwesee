@@ -9,6 +9,7 @@
     const lb = $('lightbox');
     const lbImg = $('lb-img');
     const lbCount = $('lb-count');
+    const lbTags = $('lb-tags');
     const lbClose = $('lb-close');
     const lbPrev = $('lb-prev');
     const lbNext = $('lb-next');
@@ -146,6 +147,24 @@
         img.src = fullSrc(list[i]);
     }
 
+    // the albums this photo is in, in sidebar order; each opens that album (and its note)
+    function renderPhotoTags(p) {
+        lbTags.textContent = '';
+        for (const a of albums.filter((x) => p.tags.includes(x.slug))) {
+            let item;
+            if (a.slug === view) {
+                item = document.createElement('span');
+                item.setAttribute('aria-current', 'page');
+            } else {
+                item = document.createElement('a');
+                item.href = albumHash(a.slug);
+            }
+            item.textContent = a.title;
+            lbTags.appendChild(item);
+        }
+        lbTags.hidden = !lbTags.childElementCount;
+    }
+
     function show(i) {
         idx = i;
         const p = list[i];
@@ -153,6 +172,7 @@
         lbImg.onload = () => lbImg.classList.remove('is-loading');
         lbImg.src = fullSrc(p);
         lbCount.textContent = `${i + 1} / ${list.length}`;
+        renderPhotoTags(p);
         lbPrev.disabled = i === 0;
         lbNext.disabled = i === list.length - 1;
         preload(i - 1);
@@ -248,7 +268,7 @@
         } else if (e.key === 'ArrowRight') {
             step(1);
         } else if (e.key === 'Tab') {
-            const stops = [lbClose, lbPrev, lbNext].filter((b) => !b.disabled);
+            const stops = [lbClose, ...lbTags.querySelectorAll('a'), lbPrev, lbNext].filter((b) => !b.disabled);
             const at = stops.indexOf(document.activeElement);
             const next = e.shiftKey ? at - 1 : at + 1;
             e.preventDefault();
