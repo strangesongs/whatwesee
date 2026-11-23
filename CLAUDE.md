@@ -44,14 +44,15 @@ iPhone photos (HEIC/HEIF) work in both paths: on a Mac they're converted to JPEG
 
 Optional drop folder: `inbox/` (no tags) and `inbox/<name>/` (tagged `<name>`), then `npm run build`.
 `inbox/` is git-ignored and exists only on this computer. The upload page doesn't copy originals anywhere.
-Only the resized copies (2048px full, 800px thumb, ~420 KB per photo, metadata/GPS stripped) are committed.
+Only the resized copies (3200px long edge full, never enlarged; 800px thumb; ~550 KB per photo for the current
+scans, more for higher-resolution sources; metadata/GPS stripped) are committed. Raised from 2048px in Nov 2026.
 
 ## Publishing / hosting
 
 - Hosted by GitHub Pages, deployed by `.github/workflows/pages.yml` on every push to `main` that touches `src/**`.
 - The repo must be PUBLIC (Pages on a private repo needs a paid plan). Settings -> Pages -> Source = "GitHub Actions".
 - Manual redeploy: GitHub -> Actions -> "Deploy site" -> Run workflow.
-- Keep the repo small: GitHub rejects files over 100 MB and recommends repos under ~1 GB (~2000 photos).
+- Keep the repo small: GitHub rejects files over 100 MB and recommends repos under ~1 GB (published site max 1 GB): roughly 1,000–1,800 photos at 3200px, depending on the source resolution.
 
 ## How it works
 
