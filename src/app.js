@@ -5,6 +5,7 @@
     const navEl = $('album-nav');
     const galleryEl = $('gallery');
     const noteEl = $('album-note');
+    const coverEl = $('cover');
     const statusEl = $('status');
     const lb = $('lightbox');
     const lbImg = $('lb-img');
@@ -16,9 +17,13 @@
 
     const SITE = 'what we see is what we are';
     const SWIPE = 40;
+    const COVER_TAG = 'cover'; // photos tagged "cover" are the landing page's picks; never shown as an album
+    const COVER = Symbol('cover'); // renderedView while the landing page's cover photo is showing
+    const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
-    // photos.json: { albums: [{ slug, title, note? }], photos: [{ file, w, h, tags: [slug] }] }
-    // Each tag is an album; a photo can be in several. '' is the "all" view.
+    // photos.json: { albums: [{ slug, title, note? }], photos: [{ file, w, h, tags: [slug], date? }] }
+    // Each tag is an album; a photo can be in several. '' is the "all" view (#all).
+    // The landing page (#) shows one cover photo instead, picked at random on each load.
     let albums = [];
     let photos = [];
     let view = '';
@@ -28,10 +33,11 @@
     let opener = null;
     let touchX = null;
     let touchY = null;
+    let cover = null;
 
     const fullSrc = (p) => `photos/${p.file}`;
     const thumbSrc = (p) => `photos/thumbs/${p.file}`;
-    const albumHash = (slug) => (slug ? `#album/${slug}` : '#');
+    const albumHash = (slug) => (slug ? `#album/${slug}` : '#all');
     const photoHash = (p) => (view ? `#album/${view}/${p.file}` : `#photo/${p.file}`);
     // an album's own order (set on the upload page); photos not placed yet come first
     function inAlbum(slug) {
@@ -51,7 +57,7 @@
         const ul = document.createElement('ul');
         [{ slug: '', title: 'all' }, ...albums].forEach((a) => {
             const li = document.createElement('li');
-            if (a.slug === view) {
+            if (a.slug === view && renderedView !== COVER) {
                 const span = document.createElement('span');
                 span.className = 'is-active';
                 span.textContent = a.title;
@@ -134,9 +140,104 @@
         renderedView = view;
         list = album ? inAlbum(slug) : photos;
         document.title = album ? `${album.title} — ${SITE}` : SITE;
+        coverEl.hidden = true;
+        galleryEl.hidden = false;
         renderNav();
         renderNote(album);
         renderGrid();
+    }
+
+    /* Landing page: one landscape photo, scaled up where the grid would be.
+       A new one is picked on every page load. Clicking it opens its album. */
+
+    // photos tagged "cover", else any landscape, else anything
+    function pickCover() {
+        const chosen = photos.filter((p) => p.tags.includes(COVER_TAG));
+        const wide = photos.filter((p) => p.w / p.h >= 1.2);
+        const pool = chosen.length ? chosen : wide.length ? wide : photos;
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    // the photo's most specific album (fewest photos), so a place beats "b/w" or "color"
+    function homeAlbum(p) {
+        let best = null;
+        let size = Infinity;
+        for (const a of albums) {
+            if (!p.tags.includes(a.slug)) continue;
+            const n = inAlbum(a.slug).length;
+            if (n < size) {
+                best = a;
+                size = n;
+            }
+        }
+        return best;
+    }
+
+    function formatDate(d) {
+        const m = typeof d === 'string' && d.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : '';
+    }
+
+    function renderCover() {
+        const p = cover;
+        const home = homeAlbum(p);
+        coverEl.textContent = '';
+        coverEl.style.setProperty('--ar', (p.w / p.h).toFixed(4));
+
+        const link = document.createElement('a');
+        link.className = 'cover-link';
+        link.href = home ? albumHash(home.slug) : `#photo/${p.file}`;
+        link.setAttribute('aria-label', home ? `open the album ${home.title}` : 'open photo');
+        const img = document.createElement('img');
+        img.src = fullSrc(p);
+        img.width = p.w;
+        img.height = p.h;
+        img.alt = '';
+        img.decoding = 'async';
+        img.classList.add('fade');
+        const shown = () => img.classList.add('is-loaded');
+        img.addEventListener('load', shown, { once: true });
+        img.addEventListener('error', shown, { once: true });
+        link.appendChild(img);
+        if (img.complete && img.naturalWidth) shown();
+        coverEl.appendChild(link);
+
+        // underneath: the albums it's in (sidebar order) and the date it was taken
+        const meta = document.createElement('figcaption');
+        meta.className = 'cover-meta';
+        const tags = document.createElement('span');
+        tags.className = 'cover-tags';
+        for (const a of albums.filter((x) => p.tags.includes(x.slug))) {
+            const t = document.createElement('a');
+            t.href = albumHash(a.slug);
+            t.textContent = a.title;
+            tags.appendChild(t);
+        }
+        meta.appendChild(tags);
+        const date = formatDate(p.date);
+        if (date) {
+            const time = document.createElement('time');
+            time.className = 'cover-date';
+            time.dateTime = p.date.slice(0, 10);
+            time.textContent = date;
+            meta.appendChild(time);
+        }
+        coverEl.appendChild(meta);
+    }
+
+    function showCover() {
+        if (renderedView === COVER) return;
+        if (!cover) cover = pickCover();
+        view = '';
+        renderedView = COVER;
+        list = photos;
+        document.title = SITE;
+        renderNav();
+        renderNote(null);
+        galleryEl.textContent = '';
+        galleryEl.hidden = true;
+        renderCover();
+        coverEl.hidden = false;
     }
 
     /* Viewer */
@@ -207,10 +308,10 @@
     }
 
     function requestClose() {
-        location.hash = albumHash(view);
+        location.hash = renderedView === COVER ? '' : albumHash(view);
     }
 
-    /* Routing:  #  |  #album/<tag>  |  #album/<tag>/<file>  |  #photo/<file>
+    /* Routing:  # (cover)  |  #all  |  #album/<tag>  |  #album/<tag>/<file>  |  #photo/<file>
        (old links like #photo/<album>/<file> still open the photo) */
 
     function route() {
@@ -233,16 +334,19 @@
             return;
         }
 
-        m = h.match(/^album\/([^/]+)$/);
         closeBox();
-        setView(m ? m[1] : '');
+        m = h.match(/^album\/([^/]+)$/);
+        if (m) setView(m[1]);
+        else if (h === 'all') setView('');
+        else showCover();
     }
 
     function init(data) {
         photos = (Array.isArray(data.photos) ? data.photos : [])
             .filter((p) => p && p.file && p.w && p.h)
             .map((p) => ({ ...p, tags: Array.isArray(p.tags) ? p.tags : [] }));
-        albums = (Array.isArray(data.albums) ? data.albums : []).filter((a) => a && a.slug && inAlbum(a.slug).length);
+        albums = (Array.isArray(data.albums) ? data.albums : [])
+            .filter((a) => a && a.slug && a.slug !== COVER_TAG && inAlbum(a.slug).length);
 
         if (!photos.length) {
             statusEl.textContent = 'no photos yet.';

@@ -194,11 +194,11 @@ main {
 }
 
 /* fade each photo in as it finishes loading (class added by app.js) */
-.tile img.fade {
+img.fade {
     opacity: 0;
 }
 
-.tile img.fade.is-loaded {
+img.fade.is-loaded {
     opacity: 1;
 }
 
@@ -206,6 +206,74 @@ main {
 .tile:hover img:not(.fade) {
     opacity: 0.9;
     transition-duration: 150ms;
+}
+
+/* Landing page: one cover photo where the grid would be, hung like a print.
+   Photo + caption fit in the window with the same 48px margin above and below
+   (136px = 48 top + ~40 caption + 48 bottom; --ar is its aspect ratio), and it's
+   centred in the column so spare width becomes even margins on both sides. */
+.cover {
+    margin: 0 auto;
+    width: min(100%, calc((100vh - 136px) * var(--ar, 1.5)));
+}
+
+.cover[hidden] {
+    display: none;
+}
+
+.cover-link {
+    display: block;
+    background: var(--placeholder);
+}
+
+.cover-link img {
+    display: block;
+    width: 100%;
+    height: auto;
+    transition: opacity 600ms ease;
+}
+
+.cover-link:hover img.is-loaded {
+    opacity: 0.92;
+    transition-duration: 150ms;
+}
+
+.cover-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    padding-top: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+}
+
+.cover-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 18px;
+}
+
+.cover-tags a,
+.cover-date {
+    color: var(--muted);
+}
+
+.cover-tags a {
+    transition: color 120ms ease;
+}
+
+.cover-tags a:hover {
+    color: var(--ink);
+}
+
+.cover-date {
+    white-space: nowrap;
+}
+
+.gallery[hidden] {
+    display: none;
 }
 
 /* Viewer */
@@ -326,6 +394,11 @@ main {
         --row: 170px;
     }
 
+    /* short pages (the cover) stay packed at the top instead of spreading out */
+    .layout {
+        align-content: flex-start;
+    }
+
     .side {
         display: contents;
     }
@@ -364,6 +437,23 @@ main {
 
     .album-note {
         margin-bottom: 24px;
+    }
+
+    .cover {
+        width: 100%;
+    }
+
+    .cover-meta {
+        padding-top: 4px;
+    }
+
+    .cover-tags {
+        gap: 0 22px;
+    }
+
+    .cover-tags a {
+        display: inline-block;
+        padding: 12px 0;
     }
 
     .contact {

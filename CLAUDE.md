@@ -32,7 +32,8 @@ spawned once the app's main process exits:
 The app normally lives in the project root (falls back to the absolute path if moved).
 
 1. Uploader page: http://localhost:8091/admin/ (local only; lives in `scripts/admin/`, never published).
-2. Drop photos, type tags, upload. The page also retags, bulk-tags, reorders photos (drag; in an album view
+2. Drop photos, click tags (a button for every tag in use, plus "cover"; new tags are typed in the box), upload.
+   The same buttons are on the bulk-edit bar; each photo card keeps a typed tag field. The page also retags, bulk-tags, reorders photos (drag; in an album view
    this sets that album's own `order`, otherwise the order of "all"), sorts by date, edits dates, hides/shows
    (moves files between src/photos and staging), merges albums (rename to an existing name), warns on duplicate
    uploads (409 + "upload anyway"), renames/reorders albums, writes album notes, and deletes photos.
@@ -66,7 +67,13 @@ Only the resized copies (2048px full, 800px thumb, ~420 KB per photo, metadata/G
   local extras. Everything goes through `scripts/library.mjs` (`withLibrary`); unused tags are dropped automatically.
 - On server start, `backfill()` fills missing `dhash` and missing dates from originals in `inbox/`.
 - `scripts/library.mjs` also migrates the old folder-per-album layout (`src/photos/<album>/`) to tags on first read.
-- Routing is hash-based: `#`, `#album/<tag>`, `#album/<tag>/<file>`, `#photo/<file>` (old `#photo/<album>/<file>` links still work).
+- Routing is hash-based: `#` (cover), `#all` (grid of everything), `#album/<tag>`, `#album/<tag>/<file>`, `#photo/<file>` (old `#photo/<album>/<file>` links still work).
+- Landing page (`#`) = one cover photo where the grid would be: a random photo tagged `cover` (a hidden tag: never
+  in the sidebar, the viewer's album list or the cover caption; `#album/cover` falls back to "all"), or a random
+  landscape (w/h >= 1.2) when nothing is tagged `cover`. New on each load,
+  sized so photo + caption fit in the window, centred in the column. Clicking it opens its most specific album (the tag with the fewest photos, so a place beats
+  b/w or color; untagged opens the viewer). Underneath: its album links and date taken, in the viewer bar's type.
+  Nothing in the sidebar is active on the cover; "all" links to `#all`. (`showCover` / `renderCover` in `app.js`.)
 - The photo viewer's bar lists the albums the open photo is in (current one in ink, others link to that album and its note).
 - Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size).
 - Font: Archivo variable, self-hosted in `src/fonts/` (OFL). No external requests. `src/fonts/Archivo/` is the full download, git-ignored.
@@ -83,5 +90,6 @@ Only the resized copies (2048px full, 800px thumb, ~420 KB per photo, metadata/G
 ## Design decisions (don't undo without asking)
 
 Left sidebar with albums, off-white paper, Archivo grotesque, photos only (no captions), justified rows keeping natural aspect ratios.
+Exception: the landing cover photo has one line under it (albums + date). The grid stays caption-free.
 No serif/Georgia (rejected as looking like a personal project). No Flickr: the API is gone, everything is self-hosted.
 Old Flickr/Netlify files were removed; they remain in git history on `main`.

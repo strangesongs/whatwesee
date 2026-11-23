@@ -8,6 +8,8 @@
     const UNSUPPORTED = /\.(heic|heif|raw|cr2|cr3|nef|arw|dng|psd)$/i;
     const UNTAGGED = '\u0000untagged';
     const HIDDEN = '\u0000hidden';
+    const COVER_TAG = 'cover'; // landing-page picks; the site never shows it as an album
+    const pickers = new Set(); // redraws of the tag buttons, run when the album list changes
 
     let lib = { albums: [], photos: [] };
     let queue = []; // { file, url, state: 'ready'|'uploading'|'error', note }
@@ -96,9 +98,11 @@
         refreshStatus();
     }
 
-    /* Tag field: chips + a text box with suggestions from existing albums */
+    /* Tag field: chips + a text box with suggestions from existing albums.
+       With picker: true, also a row of buttons under it, one per tag in use (plus "cover"),
+       that toggle the tag on and off. New tags are typed into the text box. */
 
-    function tagField(container, { value = [], compact = false, placeholder = 'add a tag', onChange }) {
+    function tagField(container, { value = [], compact = false, placeholder = 'add a tag', picker = false, onChange }) {
         let tags = [...value];
         container.classList.add('tagfield');
         container.classList.toggle('is-compact', compact);
@@ -114,7 +118,34 @@
         input.setAttribute('aria-label', placeholder);
         container.append(input);
 
+        let pickEl = null;
+        const has = (slug) => tags.some((t) => keyOf(t) === slug);
+        const toggle = (slug) => {
+            const i = tags.findIndex((t) => keyOf(t) === slug);
+            if (i >= 0) tags.splice(i, 1);
+            else tags.push(slug);
+            render();
+            onChange?.([...tags]);
+        };
+        const pickButton = (slug, title) => {
+            const b = el('button', { type: 'button', className: 'pick', textContent: title });
+            b.setAttribute('aria-pressed', String(has(slug)));
+            b.addEventListener('click', () => toggle(slug));
+            return b;
+        };
+        const renderPicker = () => {
+            if (!pickEl) return;
+            const cover = pickButton(COVER_TAG, 'cover');
+            cover.classList.add('is-cover');
+            cover.title = 'a landing-page photo: the site picks one of these at random. never shown as an album';
+            pickEl.replaceChildren(
+                ...lib.albums.filter((a) => a.slug !== COVER_TAG).map((a) => pickButton(a.slug, a.title)),
+                cover,
+            );
+        };
+
         const render = () => {
+            renderPicker();
             container.querySelectorAll('.chip').forEach((c) => c.remove());
             tags.forEach((t, i) => {
                 const x = el('button', { type: 'button', textContent: '×', title: 'remove tag' });
@@ -164,6 +195,13 @@
         container.addEventListener('click', (e) => {
             if (e.target === container) input.focus();
         });
+        if (picker) {
+            pickEl = el('div', { className: 'tagpicker' });
+            pickEl.setAttribute('role', 'group');
+            pickEl.setAttribute('aria-label', 'tags in use');
+            container.after(pickEl);
+            pickers.add(renderPicker);
+        }
         render();
 
         return {
@@ -176,6 +214,7 @@
 
     function renderDatalist() {
         $('known-tags').replaceChildren(...lib.albums.map((a) => el('option', { value: a.title })));
+        pickers.forEach((redraw) => redraw());
     }
 
     const countFor = (slug) =>
@@ -210,6 +249,11 @@
         ol.replaceChildren(...lib.albums.map((a, i) => {
             const name = el('input', { type: 'text', value: a.title, spellcheck: false });
             name.setAttribute('aria-label', `name of album ${a.title}`);
+            if (a.slug === COVER_TAG) {
+                // renaming it would stop it being the landing page's tag
+                name.readOnly = true;
+                name.title = 'landing-page photos: never shown as an album on the site';
+            }
             const save = () => {
                 const title = name.value.trim();
                 if (!title) { name.value = a.title; return; }
@@ -750,8 +794,8 @@
         if (busy || queue.some((q) => q.state === 'ready')) e.preventDefault();
     });
 
-    batchField = tagField($('batch-tags'), { placeholder: 'e.g. chicago' });
-    bulkField = tagField($('bulk-tags'), { placeholder: 'tags for the selected photos' });
+    batchField = tagField($('batch-tags'), { placeholder: 'type a new tag', picker: true });
+    bulkField = tagField($('bulk-tags'), { placeholder: 'tags for the selected photos', picker: true });
 
     // also tells the server the page is still open (it quits a while after the page closes)
     setInterval(refreshStatus, 60_000);

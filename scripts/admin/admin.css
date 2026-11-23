@@ -253,6 +253,28 @@ h2 {
 }
 .chip button:hover { color: var(--ink); }
 
+/* Tag buttons under a tag field: every tag in use; dark = on */
+.tagpicker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+}
+.pick {
+    padding: 4px 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font: inherit;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+}
+.pick:hover { border-color: var(--ink); color: var(--ink); }
+.pick[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.pick.is-cover { border-style: dashed; }
+.pick.is-cover[aria-pressed="true"] { border-style: solid; }
+.bulk .tagpicker { flex: 1 1 100%; order: 1; margin-top: 0; }
+
 /* Albums */
 .albums {
     margin: 12px 0 0;
