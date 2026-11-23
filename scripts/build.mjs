@@ -6,7 +6,7 @@
 //   inbox/                      <- optional: drop originals here (local only, never committed)
 //     sunset.jpg                   added with no tags (shown under "all")
 //     chicago/01.jpg               added with the tag "chicago"
-//   src/photos/*.jpg            <- generated: 2048px web copies (+ thumbs/)
+//   src/photos/*.jpg            <- generated: 3200px web copies (+ thumbs/)
 //   src/photos.json             <- the photos, their tags, album names and order
 //
 // It also drops photos.json entries whose image was deleted, adds images put in

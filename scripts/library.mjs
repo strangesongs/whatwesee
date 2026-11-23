@@ -1,7 +1,7 @@
 // The photo library: shared by build.mjs (inbox/ -> site) and serve.mjs (the
 // uploader, opened by "whatwesee studio.app").
 //
-//   src/photos/<name>.jpg          2048px web copy of a photo on the site (metadata/GPS stripped)
+//   src/photos/<name>.jpg          3200px web copy of a photo on the site (metadata/GPS stripped)
 //   src/photos/thumbs/<name>.jpg   800px grid copy
 //   staging/<name>.jpg (+ thumbs/) hidden photos: in the studio, not on the site, not in git
 //   staging/library.json           the full library (what the studio works from; not in git)
@@ -32,7 +32,7 @@ export const MANIFEST = path.join(SRC, 'photos.json');
 export const STAGING = path.join(ROOT, 'staging');
 const LOCAL = path.join(STAGING, 'library.json');
 
-const FULL = 2048; // long edge of the viewer image
+const FULL = 3200; // long edge of the viewer image (sharp on big high-resolution screens; never enlarged)
 const THUMB = 800; // long edge of the grid image
 
 export const IMAGE = /\.(jpe?g|png|webp|tiff?|gif|avif)$/i;
@@ -87,7 +87,7 @@ export const thumbPath = (p) => path.join(dirOf(p), 'thumbs', p.file);
 
 /* Images */
 
-// Makes the 2048px and 800px copies of `input` (a path or a Buffer) as <name>,
+// Makes the 3200px and 800px copies of `input` (a path or a Buffer) as <name>,
 // in src/photos/ or (hidden) staging/.
 export async function makeWebCopies(input, name, { hidden = false } = {}) {
     const sharp = await loadSharp();
