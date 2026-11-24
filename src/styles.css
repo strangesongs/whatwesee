@@ -226,6 +226,10 @@ img.fade.is-loaded {
     background: var(--placeholder);
 }
 
+.cover-link picture {
+    display: block;
+}
+
 .cover-link img {
     display: block;
     width: 100%;

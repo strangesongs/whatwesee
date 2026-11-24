@@ -74,6 +74,7 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
   landscape (w/h >= 1.2) when nothing is tagged `cover`. New on each load,
   sized so photo + caption fit in the window, centred in the column. Clicking it opens its most specific album (the tag with the fewest photos, so a place beats
   b/w or color; untagged opens the viewer). Underneath: its album links and date taken, in the viewer bar's type.
+  Phones (<=860px) load the 800px thumb for it via <picture>, larger screens the full copy.
   Nothing in the sidebar is active on the cover; "all" links to `#all`. (`showCover` / `renderCover` in `app.js`.)
 - The photo viewer's bar lists the albums the open photo is in (current one in ink, others link to that album and its note).
 - Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size).
@@ -84,7 +85,7 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
 
 ## Share preview and icons
 
-- `src/og.jpg` (1200x630) is the link-preview image. `npm run build` makes it once from the first landscape photo; delete it to regenerate, or drop in your own.
+- `src/og.jpg` (1200x630) is the link-preview image. `npm run build` (or the studio) makes it once from a cover-tagged photo (else the first landscape); delete it to regenerate, or drop in your own.
 - `src/favicon.svg` and `src/apple-touch-icon.png` are the tab and home-screen icons.
 - Photos fade in as they load (`.fade` / `.is-loaded` in `app.js` and `styles.css`).
 

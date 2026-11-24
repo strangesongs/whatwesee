@@ -138,7 +138,9 @@ export async function ensureShareImage(lib) {
     const target = path.join(SRC, 'og.jpg');
     if (await exists(target)) return;
     const shown = lib.photos.filter((p) => !p.hidden);
-    const pick = shown.find((p) => p.w > p.h) || shown[0];
+    // a landing-page photo if there is one (wide first), else the first wide photo
+    const covers = shown.filter((p) => p.tags.includes('cover'));
+    const pick = covers.find((p) => p.w > p.h) || covers[0] || shown.find((p) => p.w > p.h) || shown[0];
     if (!pick) return;
     const sharp = await loadSharp();
     await sharp(fullPath(pick))

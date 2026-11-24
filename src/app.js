@@ -188,6 +188,12 @@
         link.className = 'cover-link';
         link.href = home ? albumHash(home.slug) : `#photo/${p.file}`;
         link.setAttribute('aria-label', home ? `open the album ${home.title}` : 'open photo');
+        // phones get the 800px grid copy (plenty at phone width, a fraction of the download)
+        const picture = document.createElement('picture');
+        const small = document.createElement('source');
+        small.media = '(max-width: 860px)';
+        small.srcset = thumbSrc(p);
+        picture.appendChild(small);
         const img = document.createElement('img');
         img.src = fullSrc(p);
         img.width = p.w;
@@ -198,7 +204,8 @@
         const shown = () => img.classList.add('is-loaded');
         img.addEventListener('load', shown, { once: true });
         img.addEventListener('error', shown, { once: true });
-        link.appendChild(img);
+        picture.appendChild(img);
+        link.appendChild(picture);
         if (img.complete && img.naturalWidth) shown();
         coverEl.appendChild(link);
 
