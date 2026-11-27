@@ -29,7 +29,11 @@
     const PAPER = themeMeta ? themeMeta.content : '#fbfaf8';
     const phone = window.matchMedia('(max-width: 860px)');
 
-    const SITE = 'what we see is what we are';
+    const SITE = 'what we see is what we are — j cretella';
+
+    // the copyright line under the contact details keeps the current year
+    const copyrightEl = $('copyright');
+    if (copyrightEl) copyrightEl.textContent = `© ${new Date().getFullYear()} j cretella`;
     const SWIPE = 40;
     const COVER_TAG = 'cover'; // photos tagged "cover" are the landing page's picks; never shown as an album
     const COVER = Symbol('cover'); // renderedView while the landing page's cover photo is showing
@@ -233,6 +237,8 @@
         link.className = 'cover-link';
         link.href = home ? albumHash(home.slug) : `#photo/${p.file}`;
         link.setAttribute('aria-label', home ? `open the album ${home.title}` : 'open photo');
+        // the small grid copy shows straight away underneath; the sharp one fades in over it
+        link.style.backgroundImage = `url("${thumbSrc(p)}")`;
         // phones: the cover opens in the viewer (its albums are linked underneath); desktop opens its album
         link.addEventListener('click', (e) => {
             if (!phone.matches) return;

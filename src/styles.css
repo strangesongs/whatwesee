@@ -223,7 +223,7 @@ img.fade.is-loaded {
 
 .cover-link {
     display: block;
-    background: var(--placeholder);
+    background: var(--placeholder) center / cover no-repeat; /* app.js puts the small grid copy here while the full one loads */
 }
 
 .cover-link picture {
