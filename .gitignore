@@ -6,3 +6,6 @@ inbox/
 staging/
 # the full Archivo download (all weights); the site uses the single subset file in src/fonts/
 src/fonts/Archivo/
+
+# screenshots Claude sends in chat (saved here by the desktop app); not part of the site
+Claude outputs/
