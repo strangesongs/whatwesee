@@ -72,6 +72,11 @@
             ul.appendChild(li);
         });
         navEl.appendChild(ul);
+        // phones show the albums as one sideways-scrolling line: keep the current one in view
+        const cur = ul.querySelector('.is-active');
+        if (cur && ul.scrollWidth > ul.clientWidth) {
+            ul.scrollLeft += cur.getBoundingClientRect().left - ul.getBoundingClientRect().left - 16;
+        }
     }
 
     function renderGrid() {
@@ -293,18 +298,30 @@
             opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
             lb.hidden = false;
             document.body.classList.add('no-scroll');
-            lbClose.focus();
+            lb.focus(); // the viewer itself, not the close button, so no focus ring shows on a tap
         }
         show(i);
     }
 
     function closeBox() {
         if (lb.hidden) return;
+        setImmersive(false);
         lb.hidden = true;
         document.body.classList.remove('no-scroll');
         lbImg.removeAttribute('src');
         if (opener && document.contains(opener)) opener.focus();
         opener = null;
+    }
+
+    // full screen: tap the photo to hide the controls (black background); tap again to bring them back.
+    // Where the browser allows it (not iPhone Safari), the browser's own chrome goes too.
+    function setImmersive(on) {
+        lb.classList.toggle('is-immersive', on);
+        if (on && lb.requestFullscreen && !document.fullscreenElement) {
+            lb.requestFullscreen().catch(() => {});
+        } else if (!on && document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
     }
 
     function step(d) {
@@ -367,6 +384,10 @@
     /* Events */
 
     lbClose.addEventListener('click', requestClose);
+    lbImg.addEventListener('click', () => setImmersive(!lb.classList.contains('is-immersive')));
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) lb.classList.remove('is-immersive');
+    });
     lbPrev.addEventListener('click', () => step(-1));
     lbNext.addEventListener('click', () => step(1));
 

@@ -391,11 +391,34 @@ img.fade.is-loaded {
     opacity: 0.35;
 }
 
+/* Full screen: tapping the photo hides the controls and puts it on black;
+   tapping again brings them back (app.js toggles .is-immersive). */
+.lightbox:focus {
+    outline: none;
+}
+
+.lb-img {
+    cursor: zoom-in;
+}
+
+.lightbox.is-immersive {
+    padding: 0;
+    background: #000;
+}
+
+.lightbox.is-immersive .lb-bar {
+    display: none;
+}
+
+.lightbox.is-immersive .lb-img {
+    cursor: zoom-out;
+}
+
 /* Narrow screens: stack wordmark, albums, photos, contact. */
 @media (max-width: 860px) {
     :root {
-        --gap: 8px;
-        --row: 170px;
+        --gap: 6px;
+        --row: 120px; /* 2-3 photos a row on a phone */
     }
 
     /* short pages (the cover) stay packed at the top instead of spreading out */
@@ -410,19 +433,35 @@ img.fade.is-loaded {
     .wordmark {
         order: 1;
         flex: 1 1 100%;
-        padding: 24px 16px 0;
+        padding: 18px 16px 0;
     }
 
     .album-nav {
         order: 2;
         flex: 1 1 100%;
-        padding: 16px 16px 0;
+        min-width: 0;
+        padding: 2px 0 0;
     }
 
+    /* albums: one line that scrolls sideways, fading out at the right edge */
     .album-nav ul {
         flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0 22px;
+        flex-wrap: nowrap;
+        gap: 0 20px;
+        padding: 0 48px 0 16px;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+        mask-image: linear-gradient(to right, #000 82%, transparent);
+    }
+
+    .album-nav ul::-webkit-scrollbar {
+        display: none;
+    }
+
+    .album-nav li {
+        flex: none;
+        white-space: nowrap;
     }
 
     /* comfortable touch targets (~44px tall) */
@@ -436,7 +475,7 @@ img.fade.is-loaded {
     main {
         order: 3;
         flex: 1 1 100%;
-        padding: 24px 16px 40px;
+        padding: 6px 16px 40px;
     }
 
     .album-note {
@@ -466,15 +505,15 @@ img.fade.is-loaded {
         padding: 0 16px 40px;
     }
 
-    /* viewer: photo fills the screen, controls sit at the bottom within thumb reach */
+    /* viewer: photo runs edge to edge, controls sit at the bottom within thumb reach */
     .lightbox {
-        padding: 12px 16px calc(8px + env(safe-area-inset-bottom));
+        padding: 0 0 calc(6px + env(safe-area-inset-bottom));
     }
 
     .lb-bar {
         order: 2;
         flex-wrap: wrap;
-        padding: 8px 0 0;
+        padding: 4px 16px 0;
     }
 
     /* album links get their own row under the controls */
@@ -492,7 +531,7 @@ img.fade.is-loaded {
     .lb-tags a,
     .lb-tags [aria-current] {
         display: inline-block;
-        padding: 12px 0;
+        padding: 6px 0 10px;
     }
 
     .lb-bar button {
