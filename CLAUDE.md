@@ -87,7 +87,8 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
 - Phones (<=860px, the `phone` media query in `app.js` matches the CSS block): one-line header (wordmark + "albums"
   button that opens the album list), the album's name above its photos (`#album-head`), a 2-column grid (`.gallery.is-cols`;
   each photo goes in the shorter column so order still reads left-to-right), contact lines under a hairline.
-  Tapping the cover opens it in the viewer (desktop: its album). Photos open in the phone viewer `#pv`, not the lightbox:
+  Tapping the cover opens it in the viewer within its album (the one desktop opens; swiping stays in that album,
+  closing returns to the cover). Photos open in the phone viewer `#pv`, not the lightbox:
   full screen on black (html background + theme-color go black so nothing shows behind Safari's toolbar), a scroll-snap
   track for swiping between photos (`replaceState` keeps the URL on the current photo), tap = hide/show controls
   (waits 300ms for a double-tap), double-tap or pinch = zoom (custom transform; panning clamped to the photo's edges;

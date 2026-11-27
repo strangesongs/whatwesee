@@ -237,7 +237,8 @@
         link.addEventListener('click', (e) => {
             if (!phone.matches) return;
             e.preventDefault();
-            location.hash = `#photo/${p.file}`;
+            // swipe through the album it comes from (the one desktop opens); closing comes back here
+            location.hash = home ? `#album/${home.slug}/${p.file}` : `#photo/${p.file}`;
         });
         // phones get the 800px grid copy (plenty at phone width, a fraction of the download)
         const picture = document.createElement('picture');
@@ -284,7 +285,12 @@
     }
 
     function showCover() {
-        if (renderedView === COVER) return;
+        if (renderedView === COVER) {
+            // back from the viewer opened on the cover
+            view = '';
+            list = photos;
+            return;
+        }
         if (!cover) cover = pickCover();
         view = '';
         renderedView = COVER;
@@ -477,6 +483,13 @@
         let m = h.match(/^album\/([^/]+)\/([^/]+)$/);
         if (m && byFile(m[2])) {
             const p = byFile(m[2]);
+            // phones, opened from the cover: view the photo in its album but keep the cover underneath
+            if (phone.matches && renderedView === COVER && p.tags.includes(m[1]) && albums.some((a) => a.slug === m[1])) {
+                view = m[1];
+                list = inAlbum(view);
+                openPhoto(p);
+                return;
+            }
             setView(p.tags.includes(m[1]) ? m[1] : '');
             openPhoto(p);
             return;
