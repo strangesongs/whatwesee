@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>what we see is what we are</title>
+    <meta name="robots" content="noindex">
+    <meta name="description" content="Photography by j cretella.">
+    <meta name="theme-color" content="#fbfaf8">
+    <meta property="og:title" content="what we see is what we are">
+    <meta property="og:description" content="Photography by j cretella.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://strangesongs.github.io/whatwesee/">
+    <meta property="og:image" content="https://strangesongs.github.io/whatwesee/og.jpg">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="what we see is what we are">
+    <meta name="twitter:description" content="Photography by j cretella.">
+    <meta name="twitter:image" content="https://strangesongs.github.io/whatwesee/og.jpg">
+    <link rel="canonical" href="https://strangesongs.github.io/whatwesee/">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="preload" href="fonts/archivo-variable.woff" as="font" type="font/woff" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="m.css">
+</head>
+<body>
+    <div class="layout">
+        <aside class="side">
+            <h1 class="wordmark"><a href="./">what we see is what we are</a></h1>
+            <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="album-nav">albums</button>
+            <nav id="album-nav" class="album-nav" aria-label="Albums" hidden></nav>
+            <div class="contact" id="contact">
+                <span>j cretella</span>
+                <a href="mailto:jcrtll@protonmail.com">jcrtll@protonmail.com</a>
+                <a href="https://strangesongs.github.io">strangesongs.github.io</a>
+            </div>
+        </aside>
+
+        <main>
+            <p id="status" class="status" aria-live="polite">loading…</p>
+            <figure id="cover" class="cover" hidden></figure>
+            <div id="album-head" class="album-head" hidden><span id="album-title"></span><a id="album-back" href="#all" hidden>grid</a></div>
+            <div id="album-note" class="album-note" hidden></div>
+            <div id="gallery" class="gallery" aria-label="Photos"></div>
+        </main>
+    </div>
+
+    <div id="lightbox" class="lightbox" tabindex="-1" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+        <div class="lb-bar">
+            <button id="lb-close" type="button">close</button>
+            <span class="lb-meta">
+                <span id="lb-count" class="lb-count" aria-live="polite"></span>
+                <nav id="lb-tags" class="lb-tags" aria-label="Albums this photo is in"></nav>
+            </span>
+            <span class="lb-steps">
+                <button id="lb-prev" type="button">&larr; prev</button>
+                <button id="lb-next" type="button">next &rarr;</button>
+            </span>
+        </div>
+        <div class="lb-stage">
+            <img id="lb-img" class="lb-img" src="" alt="">
+        </div>
+    </div>
+
+    <noscript><p class="status">the gallery needs javascript to load.</p></noscript>
+    <script src="m.js"></script>
+</body>
+</html>

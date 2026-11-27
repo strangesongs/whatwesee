@@ -87,6 +87,11 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
 - Mobile (<=860px): stacked header, albums as one sideways-scrolling line (fades at the right; current album scrolled
   into view), grid rows ~120px so 2-3 photos a row, 44px tap targets, viewer photo edge to edge with controls at the
   bottom, swipe to navigate.
+- Phone layout v2 (test page, Nov 2026): `src/m.html` (noindex, unlinked) = index.html + `m.css` + `m.js` (a fork of app.js).
+  Phones get a one-line header with an "albums" menu, the album name above the photos, a 2-column grid (each photo
+  into the shorter column), and tapping a photo turns the page into one full-width column of the album ("stack", no
+  overlay; sticky album name + "grid"). Desktop is identical to index.html. If approved: fold m.css into styles.css,
+  m.js into app.js, move the new header/album-head markup into index.html, and delete the m.* files.
 - Viewer full screen (all sizes): tapping the photo toggles `.is-immersive` (controls hidden, black background) and asks
   for real browser fullscreen where allowed (not iPhone Safari). The viewer focuses itself on open, not the close button,
   so taps don't leave a focus ring.

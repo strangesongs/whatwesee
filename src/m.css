@@ -1,0 +1,155 @@
+/* Phone layout, second try (only m.html loads this; desktop is unchanged).
+   One-line header with an "albums" menu, 2-column grid, and tapping a photo turns the
+   page into one full-width column of the album (m.js "stack") instead of a viewer overlay. */
+
+.nav-toggle,
+.album-head {
+    display: none;
+}
+
+@media (max-width: 860px) {
+    :root {
+        --gap: 6px;
+    }
+
+    .layout {
+        align-items: baseline;
+    }
+
+    /* header: title left, "albums" right, on one line */
+    .wordmark {
+        order: 1;
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: 18px 0 10px 16px;
+    }
+
+    .nav-toggle {
+        display: block;
+        order: 2;
+        flex: none;
+        min-height: 44px;
+        padding: 18px 16px 10px 16px;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: var(--muted);
+        cursor: pointer;
+    }
+
+    .nav-toggle[aria-expanded="true"] {
+        color: var(--ink);
+    }
+
+    /* the album list only shows when "albums" is tapped (undoes the sideways strip in styles.css) */
+    .album-nav {
+        order: 3;
+        flex: 1 1 100%;
+        padding: 0 16px 10px;
+    }
+
+    .layout:not(.nav-open) .album-nav {
+        display: none;
+    }
+
+    .album-nav ul {
+        flex-wrap: wrap;
+        gap: 0 22px;
+        padding: 0;
+        overflow: visible;
+        -webkit-mask-image: none;
+        mask-image: none;
+    }
+
+    .album-nav li {
+        white-space: normal;
+    }
+
+    main {
+        order: 4;
+        padding: 0 16px 40px;
+    }
+
+    .contact {
+        order: 5;
+    }
+
+    /* the album you're in, above its photos; in the stack it stays at the top with a way back */
+    .album-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 6px 0 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 11px;
+    }
+
+    .album-head[hidden],
+    .album-head a[hidden] {
+        display: none;
+    }
+
+    .album-head a {
+        color: var(--muted);
+        padding: 12px 0;
+        margin: -12px 0;
+    }
+
+    main.is-stack .album-head {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        margin: 0 -16px;
+        padding: 12px 16px;
+        background: var(--paper);
+    }
+
+    main.is-stack .album-note {
+        display: none;
+    }
+
+    /* grid: two columns, real shapes */
+    .gallery.is-cols {
+        flex-wrap: nowrap;
+        align-items: flex-start;
+    }
+
+    .gallery.is-cols::after,
+    .gallery.is-stack::after {
+        display: none;
+    }
+
+    .gallery .col {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap);
+    }
+
+    .gallery .col .tile {
+        flex: none;
+    }
+
+    /* stack: every photo the full width of the screen */
+    .gallery.is-stack {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        gap: 12px;
+        margin: 0 -16px;
+    }
+
+    .shot {
+        background: var(--placeholder);
+        scroll-margin-top: 40px;
+    }
+
+    .shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+        transition: opacity 600ms ease;
+    }
+}
