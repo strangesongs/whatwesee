@@ -14,6 +14,20 @@
     const lbClose = $('lb-close');
     const lbPrev = $('lb-prev');
     const lbNext = $('lb-next');
+    const layoutEl = document.querySelector('.layout');
+    const navToggle = $('nav-toggle');
+    const headEl = $('album-head');
+    const headTitle = $('album-title');
+    // phones get their own viewer (pv): full screen on black, swipe between photos, tap to hide the
+    // controls, fills the screen when the phone is turned. Desktop keeps the lightbox above.
+    const pv = $('pv');
+    const pvTrack = $('pv-track');
+    const pvClose = $('pv-close');
+    const pvCount = $('pv-count');
+    const pvTags = $('pv-tags');
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const PAPER = themeMeta ? themeMeta.content : '#fbfaf8';
+    const phone = window.matchMedia('(max-width: 860px)');
 
     const SITE = 'what we see is what we are';
     const SWIPE = 40;
@@ -34,6 +48,9 @@
     let touchX = null;
     let touchY = null;
     let cover = null;
+    let pvIdx = -1;
+    let pvList = null;
+    let pvWidth = 0;
 
     const fullSrc = (p) => `photos/${p.file}`;
     const thumbSrc = (p) => `photos/thumbs/${p.file}`;
@@ -79,14 +96,13 @@
         }
     }
 
-    function renderGrid() {
-        const frag = document.createDocumentFragment();
-        list.forEach((p, i) => {
+    function makeTile(p, i) {
             const a = document.createElement('a');
             a.className = 'tile';
             a.href = photoHash(p);
             a.style.setProperty('--ar', (p.w / p.h).toFixed(4));
             a.setAttribute('aria-label', `open photo ${i + 1} of ${list.length}`);
+            a.dataset.file = p.file;
 
             const img = document.createElement('img');
             img.src = thumbSrc(p);
@@ -101,8 +117,29 @@
             if (i > 11) img.loading = 'lazy';
             a.appendChild(img);
             if (img.complete && img.naturalWidth) shown();
-            frag.appendChild(a);
-        });
+            return a;
+    }
+
+    function renderGrid() {
+        const frag = document.createDocumentFragment();
+        galleryEl.classList.toggle('is-cols', phone.matches);
+        if (phone.matches) {
+            // phones: two columns, each photo at its real shape; each goes in the shorter column so
+            // the album order still reads left-to-right, top-to-bottom
+            const cols = [document.createElement('div'), document.createElement('div')];
+            const height = [0, 0];
+            list.forEach((p, i) => {
+                const k = height[0] <= height[1] ? 0 : 1;
+                cols[k].appendChild(makeTile(p, i));
+                height[k] += p.h / p.w;
+            });
+            cols.forEach((c) => {
+                c.className = 'col';
+                frag.appendChild(c);
+            });
+        } else {
+            list.forEach((p, i) => frag.appendChild(makeTile(p, i)));
+        }
         galleryEl.textContent = '';
         galleryEl.appendChild(frag);
     }
@@ -147,6 +184,9 @@
         document.title = album ? `${album.title} — ${SITE}` : SITE;
         coverEl.hidden = true;
         galleryEl.hidden = false;
+        headTitle.textContent = album ? album.title : 'all';
+        headEl.hidden = false;
+        window.scrollTo(0, 0);
         renderNav();
         renderNote(album);
         renderGrid();
@@ -193,6 +233,12 @@
         link.className = 'cover-link';
         link.href = home ? albumHash(home.slug) : `#photo/${p.file}`;
         link.setAttribute('aria-label', home ? `open the album ${home.title}` : 'open photo');
+        // phones: the cover opens in the viewer (its albums are linked underneath); desktop opens its album
+        link.addEventListener('click', (e) => {
+            if (!phone.matches) return;
+            e.preventDefault();
+            location.hash = `#photo/${p.file}`;
+        });
         // phones get the 800px grid copy (plenty at phone width, a fraction of the download)
         const picture = document.createElement('picture');
         const small = document.createElement('source');
@@ -246,6 +292,7 @@
         document.title = SITE;
         renderNav();
         renderNote(null);
+        headEl.hidden = true;
         galleryEl.textContent = '';
         galleryEl.hidden = true;
         renderCover();
@@ -261,8 +308,8 @@
     }
 
     // the albums this photo is in, in sidebar order; each opens that album (and its note)
-    function renderPhotoTags(p) {
-        lbTags.textContent = '';
+    function renderPhotoTags(p, el = lbTags) {
+        el.textContent = '';
         for (const a of albums.filter((x) => p.tags.includes(x.slug))) {
             let item;
             if (a.slug === view) {
@@ -273,9 +320,9 @@
                 item.href = albumHash(a.slug);
             }
             item.textContent = a.title;
-            lbTags.appendChild(item);
+            el.appendChild(item);
         }
-        lbTags.hidden = !lbTags.childElementCount;
+        el.hidden = !el.childElementCount;
     }
 
     function show(i) {
@@ -303,7 +350,84 @@
         show(i);
     }
 
+    /* Phone viewer: one slide per photo in a sideways scroller that snaps, so swiping follows
+       the finger like the Photos app. Images load for the open photo and its neighbours. */
+
+    function pvLoad(j) {
+        const slide = pvTrack.children[j];
+        if (!slide) return;
+        const img = slide.firstChild;
+        if (img.getAttribute('src')) return;
+        const p = pvList[j];
+        const long = Math.max(p.w, p.h);
+        img.srcset = `${thumbSrc(p)} ${Math.round((800 * p.w) / long)}w, ${fullSrc(p)} ${p.w}w`;
+        img.sizes = '100vw';
+        img.src = thumbSrc(p);
+    }
+
+    function pvShow(i) {
+        pvIdx = i;
+        pvCount.textContent = `${i + 1} / ${pvList.length}`;
+        renderPhotoTags(pvList[i], pvTags);
+        pvLoad(i);
+        pvLoad(i - 1);
+        pvLoad(i + 1);
+    }
+
+    function openPv(i) {
+        if (i < 0) return;
+        if (pv.hidden) {
+            pv.hidden = false;
+            pv.classList.remove('is-bare');
+            document.documentElement.classList.add('pv-open');
+            document.body.classList.add('no-scroll');
+            if (themeMeta) themeMeta.content = '#000';
+            pv.focus();
+        }
+        if (pvList !== list) {
+            pvList = list;
+            pvTrack.textContent = '';
+            for (const p of list) {
+                const slide = document.createElement('div');
+                slide.className = 'pv-slide';
+                const img = document.createElement('img');
+                img.alt = '';
+                img.decoding = 'async';
+                slide.appendChild(img);
+                pvTrack.appendChild(slide);
+            }
+        }
+        pvWidth = pvTrack.clientWidth;
+        pvTrack.scrollLeft = i * pvWidth;
+        pvShow(i);
+    }
+
+    function closePv() {
+        if (pv.hidden) return;
+        clearTimeout(tapTimer);
+        gesture = null;
+        zs = 1;
+        zx = 0;
+        zy = 0;
+        const img = pvImg();
+        if (img) {
+            img.style.transition = 'none';
+            img.style.transform = '';
+        }
+        pv.classList.remove('is-zoomed', 'is-dragging');
+        pv.hidden = true;
+        document.documentElement.classList.remove('pv-open');
+        document.body.classList.remove('no-scroll');
+        if (themeMeta) themeMeta.content = PAPER;
+        // back on the grid with the last photo you looked at in view
+        const p = pvList && pvList[pvIdx];
+        const tile = p && galleryEl.querySelector(`[data-file="${CSS.escape(p.file)}"]`);
+        if (tile) tile.scrollIntoView({ block: 'nearest' });
+        pvIdx = -1;
+    }
+
     function closeBox() {
+        closePv();
         if (lb.hidden) return;
         setImmersive(false);
         lb.hidden = true;
@@ -338,15 +462,23 @@
     /* Routing:  # (cover)  |  #all  |  #album/<tag>  |  #album/<tag>/<file>  |  #photo/<file>
        (old links like #photo/<album>/<file> still open the photo) */
 
+    function openPhoto(p) {
+        if (phone.matches) openPv(list.indexOf(p));
+        else openAt(list.indexOf(p));
+    }
+
     function route() {
         const h = decodeURIComponent(location.hash.slice(1));
         const byFile = (file) => photos.find((p) => p.file === file);
+
+        layoutEl.classList.remove('nav-open');
+        navToggle.setAttribute('aria-expanded', 'false');
 
         let m = h.match(/^album\/([^/]+)\/([^/]+)$/);
         if (m && byFile(m[2])) {
             const p = byFile(m[2]);
             setView(p.tags.includes(m[1]) ? m[1] : '');
-            openAt(list.indexOf(p));
+            openPhoto(p);
             return;
         }
 
@@ -354,7 +486,7 @@
         if (m && byFile(m[1])) {
             const p = byFile(m[1]);
             if (!list.includes(p)) setView('');
-            openAt(list.indexOf(p));
+            openPhoto(p);
             return;
         }
 
@@ -379,9 +511,236 @@
         statusEl.hidden = true;
         route();
         window.addEventListener('hashchange', route);
+        // crossing the phone/desktop size: lay the page out again for the new size
+        phone.addEventListener('change', () => {
+            closeBox();
+            if (renderedView !== COVER) renderedView = null;
+            route();
+        });
     }
 
     /* Events */
+
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
+    navToggle.addEventListener('click', () => {
+        const open = layoutEl.classList.toggle('nav-open');
+        navToggle.setAttribute('aria-expanded', String(open));
+    });
+
+    pvClose.addEventListener('click', requestClose);
+    /* Phone viewer gestures: tap = show/hide the controls, double-tap = zoom in at that spot (or back
+       out), pinch = zoom, drag while zoomed = move around the photo, swipe down = close. Sideways swipes
+       are the track's own scrolling. Zooming in swaps the 800px copy for the full one. */
+    const ZOOM = 2.5;
+    const MAX_ZOOM = 4;
+    let zs = 1; // scale of the open photo
+    let zx = 0; // its offset, px
+    let zy = 0;
+    let gesture = null;
+    let lastTap = null;
+    let tapTimer = 0;
+    let lastTouchEnd = 0;
+
+    function pvImg() {
+        const slide = pvIdx >= 0 ? pvTrack.children[pvIdx] : null;
+        return slide ? slide.firstChild : null;
+    }
+
+    function trackCentre() {
+        const r = pvTrack.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height };
+    }
+
+    // keep the zoomed photo covering the screen (no empty edges dragged into view)
+    function clampPan() {
+        const p = pvList[pvIdx];
+        const c = trackCentre();
+        const k = Math.min(c.w / p.w, c.h / p.h); // object-fit: contain
+        const mx = Math.max(0, (p.w * k * zs - c.w) / 2);
+        const my = Math.max(0, (p.h * k * zs - c.h) / 2);
+        zx = Math.min(mx, Math.max(-mx, zx));
+        zy = Math.min(my, Math.max(-my, zy));
+    }
+
+    // scale to s, keeping the photo point that was under (from.px, from.py) under (x, y)
+    function zoomTo(s, x, y, from = { s: zs, x: zx, y: zy, px: x, py: y }) {
+        const c = trackCentre();
+        const ux = (from.px - c.x - from.x) / from.s;
+        const uy = (from.py - c.y - from.y) / from.s;
+        zs = Math.min(MAX_ZOOM, Math.max(1, s));
+        zx = x - c.x - ux * zs;
+        zy = y - c.y - uy * zs;
+        clampPan();
+    }
+
+    function applyZoom(animate) {
+        const img = pvImg();
+        if (!img) return;
+        img.style.transition = animate ? 'transform 220ms ease' : 'none';
+        img.style.transform = zs > 1 ? `translate(${zx}px, ${zy}px) scale(${zs})` : '';
+        pv.classList.toggle('is-zoomed', zs > 1);
+        if (zs > 1) sharpen(img, pvList[pvIdx]);
+    }
+
+    function resetZoom(animate) {
+        zs = 1;
+        zx = 0;
+        zy = 0;
+        applyZoom(animate);
+    }
+
+    // zoomed in on a phone: swap in the full-size copy once it has downloaded
+    function sharpen(img, p) {
+        if (img.dataset.full) return;
+        img.dataset.full = '1';
+        const full = new Image();
+        full.onload = () => {
+            img.removeAttribute('srcset');
+            img.src = full.src;
+        };
+        full.src = fullSrc(p);
+    }
+
+    function tap(x, y) {
+        const now = Date.now();
+        if (lastTap && now - lastTap.t < 300 && Math.hypot(x - lastTap.x, y - lastTap.y) < 40) {
+            clearTimeout(tapTimer);
+            lastTap = null;
+            if (zs > 1) {
+                resetZoom(true);
+            } else {
+                zoomTo(ZOOM, x, y);
+                applyZoom(true);
+            }
+            return;
+        }
+        lastTap = { t: now, x, y };
+        clearTimeout(tapTimer);
+        // wait to see if it's a double-tap before showing/hiding the controls
+        tapTimer = setTimeout(() => {
+            lastTap = null;
+            pv.classList.toggle('is-bare');
+        }, 300);
+    }
+
+    const span = (a, b) => Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+
+    pvTrack.addEventListener('touchstart', (e) => {
+        const t = e.touches;
+        if (t.length === 2) {
+            gesture = {
+                kind: 'pinch',
+                d: span(t[0], t[1]),
+                from: { s: zs, x: zx, y: zy, px: (t[0].clientX + t[1].clientX) / 2, py: (t[0].clientY + t[1].clientY) / 2 },
+            };
+        } else if (t.length === 1) {
+            gesture = { kind: null, x0: t[0].clientX, y0: t[0].clientY, zx, zy, time: Date.now(), moved: false };
+        }
+    }, { passive: true });
+
+    pvTrack.addEventListener('touchmove', (e) => {
+        const g = gesture;
+        if (!g) return;
+        const t = e.touches;
+        if (g.kind === 'pinch') {
+            if (t.length !== 2) return;
+            e.preventDefault();
+            const x = (t[0].clientX + t[1].clientX) / 2;
+            const y = (t[0].clientY + t[1].clientY) / 2;
+            zoomTo((g.from.s * span(t[0], t[1])) / g.d, x, y, g.from);
+            applyZoom(false);
+            return;
+        }
+        if (t.length !== 1) return;
+        const dx = t[0].clientX - g.x0;
+        const dy = t[0].clientY - g.y0;
+        if (Math.abs(dx) > 8 || Math.abs(dy) > 8) g.moved = true;
+        if (zs > 1) {
+            e.preventDefault();
+            zx = g.zx + dx;
+            zy = g.zy + dy;
+            clampPan();
+            applyZoom(false);
+            return;
+        }
+        if (g.kind === null && g.moved) g.kind = dy > 0 && Math.abs(dy) > Math.abs(dx) ? 'dismiss' : 'swipe';
+        if (g.kind === 'dismiss') {
+            e.preventDefault();
+            g.dy = Math.max(0, dy);
+            const img = pvImg();
+            if (img) {
+                img.style.transition = 'none';
+                img.style.transform = `translate(${dx * 0.4}px, ${g.dy}px) scale(${1 - Math.min(g.dy / 1200, 0.2)})`;
+            }
+            pv.classList.add('is-dragging');
+        }
+    }, { passive: false });
+
+    pvTrack.addEventListener('touchend', (e) => {
+        const g = gesture;
+        if (!g) return;
+        if (e.touches.length) {
+            // one finger of a pinch lifted: carry on as a drag from here
+            if (g.kind === 'pinch') {
+                const t = e.touches[0];
+                gesture = { kind: null, x0: t.clientX, y0: t.clientY, zx, zy, time: 0, moved: true };
+            }
+            return;
+        }
+        gesture = null;
+        lastTouchEnd = Date.now();
+        if (g.kind === 'pinch') {
+            if (zs < 1.05) resetZoom(true);
+            return;
+        }
+        if (g.kind === 'dismiss') {
+            if (g.dy > 90) {
+                requestClose();
+                return;
+            }
+            pv.classList.remove('is-dragging');
+            const img = pvImg();
+            if (img) {
+                img.style.transition = 'transform 220ms ease';
+                img.style.transform = '';
+            }
+            return;
+        }
+        if (!g.moved && Date.now() - g.time < 300) {
+            const t = e.changedTouches[0];
+            tap(t.clientX, t.clientY);
+        }
+    }, { passive: true });
+
+    pvTrack.addEventListener('touchcancel', () => {
+        gesture = null;
+        pv.classList.remove('is-dragging');
+        if (zs > 1) return;
+        const img = pvImg();
+        if (img) img.style.transform = '';
+    }, { passive: true });
+
+    // mouse (and the click iOS sends after a tap, which the touch handlers already dealt with)
+    pvTrack.addEventListener('click', (e) => {
+        if (Date.now() - lastTouchEnd < 700) return;
+        tap(e.clientX, e.clientY);
+    });
+    pvTrack.addEventListener('scroll', () => {
+        const w = pvTrack.clientWidth;
+        if (!w || w !== pvWidth || !pvList) return; // mid-rotation: the resize handler re-aligns
+        const j = Math.round(pvTrack.scrollLeft / w);
+        if (j === pvIdx || j < 0 || j >= pvList.length) return;
+        pvShow(j);
+        history.replaceState(null, '', photoHash(pvList[j]));
+    }, { passive: true });
+    // turning the phone: stay on the same photo
+    window.addEventListener('resize', () => {
+        if (pv.hidden || pvIdx < 0) return;
+        if (zs > 1) resetZoom(false);
+        pvWidth = pvTrack.clientWidth;
+        pvTrack.scrollLeft = pvIdx * pvWidth;
+    });
 
     lbClose.addEventListener('click', requestClose);
     lbImg.addEventListener('click', () => setImmersive(!lb.classList.contains('is-immersive')));
@@ -392,6 +751,7 @@
     lbNext.addEventListener('click', () => step(1));
 
     document.addEventListener('keydown', (e) => {
+        if (!pv.hidden && e.key === 'Escape') requestClose();
         if (lb.hidden) return;
         if (e.key === 'Escape') {
             requestClose();

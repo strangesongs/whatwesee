@@ -27,6 +27,7 @@
     <div class="layout">
         <aside class="side">
             <h1 class="wordmark"><a href="./">what we see is what we are</a></h1>
+            <button id="nav-toggle" class="nav-toggle" type="button" aria-expanded="false" aria-controls="album-nav">albums</button>
             <nav id="album-nav" class="album-nav" aria-label="Albums" hidden></nav>
             <div class="contact" id="contact">
                 <span>j cretella</span>
@@ -38,6 +39,7 @@
         <main>
             <p id="status" class="status" aria-live="polite">loading…</p>
             <figure id="cover" class="cover" hidden></figure>
+            <div id="album-head" class="album-head" hidden><span id="album-title"></span></div>
             <div id="album-note" class="album-note" hidden></div>
             <div id="gallery" class="gallery" aria-label="Photos"></div>
         </main>
@@ -58,6 +60,15 @@
         <div class="lb-stage">
             <img id="lb-img" class="lb-img" src="" alt="">
         </div>
+    </div>
+
+    <div id="pv" class="pv" role="dialog" aria-modal="true" aria-label="Photo viewer" tabindex="-1" hidden>
+        <div id="pv-track" class="pv-track"></div>
+        <div class="pv-top">
+            <button id="pv-close" type="button">close</button>
+            <span id="pv-count" class="pv-count" aria-live="polite"></span>
+        </div>
+        <nav id="pv-tags" class="pv-tags" aria-label="Albums this photo is in"></nav>
     </div>
 
     <noscript><p class="status">the gallery needs javascript to load.</p></noscript>

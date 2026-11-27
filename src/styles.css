@@ -391,8 +391,9 @@ img.fade.is-loaded {
     opacity: 0.35;
 }
 
-/* Full screen: tapping the photo hides the controls and puts it on black;
-   tapping again brings them back (app.js toggles .is-immersive). */
+/* Desktop viewer full screen: clicking the photo hides the controls, puts it on black and asks the
+   browser for real fullscreen; clicking again brings them back (app.js toggles .is-immersive).
+   Phones use the phone viewer (.pv) below instead. */
 .lightbox:focus {
     outline: none;
 }
@@ -414,16 +415,161 @@ img.fade.is-loaded {
     cursor: zoom-out;
 }
 
-/* Narrow screens: stack wordmark, albums, photos, contact. */
+/* Phone viewer (#pv; app.js opens it instead of the lightbox at <=860px): full screen on black,
+   swipe sideways between photos (the track snaps), tap to hide the controls, double-tap or pinch to
+   zoom, swipe down to close. The photo fits whichever way the phone is held. */
+.pv {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: #000;
+    color: #fff;
+}
+
+.pv[hidden] {
+    display: none;
+}
+
+.pv:focus {
+    outline: none;
+}
+
+/* black behind Safari's toolbar and status bar too while it's open */
+html.pv-open,
+html.pv-open body {
+    background: #000;
+}
+
+.pv-track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior: contain;
+    touch-action: pan-x; /* pinch and double-tap are handled in app.js */
+}
+
+.pv-track::-webkit-scrollbar {
+    display: none;
+}
+
+/* zoomed in: dragging moves around the photo instead of changing photos */
+.pv.is-zoomed .pv-track {
+    overflow-x: hidden;
+    touch-action: none;
+}
+
+.pv-slide {
+    flex: 0 0 100%;
+    height: 100%;
+    overflow: hidden;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+}
+
+.pv-slide img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.pv-top,
+.pv-tags {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+    transition: opacity 200ms ease;
+}
+
+.pv-top {
+    top: 0;
+    justify-content: space-between;
+    padding-top: env(safe-area-inset-top);
+    background: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
+}
+
+.pv-top button {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+}
+
+.pv-count {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pv-tags {
+    bottom: 0;
+    justify-content: center;
+    gap: 0 22px;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+}
+
+.pv-tags[hidden] {
+    display: none;
+}
+
+.pv-tags a,
+.pv-tags [aria-current] {
+    display: inline-block;
+    padding: 14px 0;
+}
+
+.pv-tags a {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pv-tags [aria-current] {
+    color: #fff;
+}
+
+/* controls out of the way: tapped away, zoomed in, or mid swipe-down */
+.pv.is-bare .pv-top,
+.pv.is-bare .pv-tags,
+.pv.is-zoomed .pv-top,
+.pv.is-zoomed .pv-tags,
+.pv.is-dragging .pv-top,
+.pv.is-dragging .pv-tags {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* phone-only header parts */
+.nav-toggle,
+.album-head {
+    display: none;
+}
+
+/* Narrow screens (phones): one-line header (wordmark + "albums" menu), the album's name above
+   its photos, a 2-column grid (app.js puts each photo in the shorter column), contact below.
+   Photos open in the phone viewer above. */
 @media (max-width: 860px) {
     :root {
         --gap: 6px;
-        --row: 120px; /* 2-3 photos a row on a phone */
     }
 
     /* short pages (the cover) stay packed at the top instead of spreading out */
     .layout {
         align-content: flex-start;
+        align-items: baseline;
     }
 
     .side {
@@ -432,54 +578,93 @@ img.fade.is-loaded {
 
     .wordmark {
         order: 1;
-        flex: 1 1 100%;
-        padding: 18px 16px 0;
-    }
-
-    .album-nav {
-        order: 2;
-        flex: 1 1 100%;
+        flex: 1 1 auto;
         min-width: 0;
-        padding: 2px 0 0;
+        padding: 18px 0 10px 16px;
     }
 
-    /* albums: one line that scrolls sideways, fading out at the right edge */
-    .album-nav ul {
-        flex-direction: row;
-        flex-wrap: nowrap;
-        gap: 0 20px;
-        padding: 0 48px 0 16px;
-        overflow-x: auto;
-        scrollbar-width: none;
-        -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
-        mask-image: linear-gradient(to right, #000 82%, transparent);
+    .nav-toggle {
+        display: block;
+        order: 2;
+        flex: none;
+        min-height: 44px;
+        padding: 18px 16px 10px;
+        border: 0;
+        background: none;
+        font: inherit;
+        color: var(--muted);
+        cursor: pointer;
     }
 
-    .album-nav ul::-webkit-scrollbar {
+    .nav-toggle[aria-expanded="true"] {
+        color: var(--ink);
+    }
+
+    /* the album list opens under the header when "albums" is tapped */
+    .album-nav {
+        order: 3;
+        flex: 1 1 100%;
+        padding: 0 16px 10px;
+    }
+
+    .layout:not(.nav-open) .album-nav {
         display: none;
     }
 
-    .album-nav li {
-        flex: none;
-        white-space: nowrap;
+    .album-nav ul {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 0 22px;
     }
 
     /* comfortable touch targets (~44px tall) */
     .album-nav a,
-    .album-nav .is-active,
-    .contact a {
+    .album-nav .is-active {
         display: inline-block;
         padding: 12px 0;
     }
 
     main {
-        order: 3;
+        order: 4;
         flex: 1 1 100%;
-        padding: 6px 16px 40px;
+        padding: 0 16px;
+    }
+
+    .album-head {
+        display: flex;
+        padding: 6px 0 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: 11px;
+    }
+
+    .album-head[hidden] {
+        display: none;
     }
 
     .album-note {
         margin-bottom: 24px;
+    }
+
+    .gallery.is-cols {
+        flex-wrap: nowrap;
+        align-items: flex-start;
+    }
+
+    .gallery.is-cols::after {
+        display: none;
+    }
+
+    .gallery .col {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap);
+    }
+
+    .gallery .col .tile {
+        flex: none;
     }
 
     .cover {
@@ -499,49 +684,20 @@ img.fade.is-loaded {
         padding: 12px 0;
     }
 
+    /* name, email, site: evenly spaced, set apart from the photos by a hairline */
     .contact {
-        order: 4;
+        order: 5;
         flex: 1 1 100%;
-        padding: 0 16px 40px;
+        gap: 0;
+        margin: 40px 16px 0;
+        padding: 12px 0 32px;
+        border-top: 1px solid var(--placeholder);
     }
 
-    /* viewer: photo runs edge to edge, controls sit at the bottom within thumb reach */
-    .lightbox {
-        padding: 0 0 calc(6px + env(safe-area-inset-bottom));
-    }
-
-    .lb-bar {
-        order: 2;
-        flex-wrap: wrap;
-        padding: 4px 16px 0;
-    }
-
-    /* album links get their own row under the controls */
-    .lb-meta {
-        display: contents;
-    }
-
-    .lb-tags {
-        order: 3;
-        flex: 1 1 100%;
-        justify-content: center;
-        gap: 0 22px;
-    }
-
-    .lb-tags a,
-    .lb-tags [aria-current] {
-        display: inline-block;
-        padding: 6px 0 10px;
-    }
-
-    .lb-bar button {
-        min-height: 44px;
-        min-width: 44px;
-        padding: 0 4px;
-    }
-
-    .lb-steps {
-        gap: 12px;
+    .contact span,
+    .contact a {
+        display: block;
+        padding: 6px 0;
     }
 }
 

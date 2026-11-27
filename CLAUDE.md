@@ -84,18 +84,18 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
 - The photo viewer's bar lists the albums the open photo is in (current one in ink, others link to that album and its note).
 - Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size).
 - Font: Archivo variable, self-hosted in `src/fonts/` (OFL). No external requests. `src/fonts/Archivo/` is the full download, git-ignored.
-- Mobile (<=860px): stacked header, albums as one sideways-scrolling line (fades at the right; current album scrolled
-  into view), grid rows ~120px so 2-3 photos a row, 44px tap targets, viewer photo edge to edge with controls at the
-  bottom, swipe to navigate.
-- Phone layout v2 (test page, Nov 2026): `src/m.html` (noindex, unlinked) = index.html + `m.css` + `m.js` (a fork of app.js).
-  Phones get a one-line header with an "albums" menu, the album name above the photos, a 2-column grid (each photo
-  into the shorter column), evenly spaced contact lines under a hairline, and a Photos-style viewer (`#pv`): full screen
-  on black (html background + theme-color go black too, so nothing shows behind Safari's toolbar), a scroll-snap track
-  to swipe between photos, tap to hide the controls, stays on the same photo when the phone turns. Desktop is identical
-  to index.html. (A first try replaced the viewer with a full-width scrolling column; the owner preferred a viewer.)
-  If approved: fold m.css into styles.css, m.js into app.js, the new markup into index.html, delete the m.* files.
-- Viewer full screen (all sizes): tapping the photo toggles `.is-immersive` (controls hidden, black background) and asks
-  for real browser fullscreen where allowed (not iPhone Safari). The viewer focuses itself on open, not the close button,
+- Phones (<=860px, the `phone` media query in `app.js` matches the CSS block): one-line header (wordmark + "albums"
+  button that opens the album list), the album's name above its photos (`#album-head`), a 2-column grid (`.gallery.is-cols`;
+  each photo goes in the shorter column so order still reads left-to-right), contact lines under a hairline.
+  Tapping the cover opens it in the viewer (desktop: its album). Photos open in the phone viewer `#pv`, not the lightbox:
+  full screen on black (html background + theme-color go black so nothing shows behind Safari's toolbar), a scroll-snap
+  track for swiping between photos (`replaceState` keeps the URL on the current photo), tap = hide/show controls
+  (waits 300ms for a double-tap), double-tap or pinch = zoom (custom transform; panning clamped to the photo's edges;
+  zooming swaps the 800px copy for the full one), swipe down = close, turning the phone keeps the photo (drops zoom).
+  Closing scrolls the grid to the last photo viewed. Tried and dropped, Nov 2026: a sideways-scrolling album strip, a
+  full-width scrolling column instead of a viewer.
+- Desktop viewer (lightbox): prev/next, keys, swipe on touch screens; clicking the photo toggles `.is-immersive`
+  (controls hidden, black) and asks for real browser fullscreen. The viewer focuses itself on open, not the close button,
   so taps don't leave a focus ring.
 - `scripts/serve.mjs` is the local server (static `src/`, `/admin/` page, `/api/*` for it). Bound to 127.0.0.1;
   rejects other Host headers and cross-origin POSTs. `scripts/watch.mjs` is the inbox watcher.
