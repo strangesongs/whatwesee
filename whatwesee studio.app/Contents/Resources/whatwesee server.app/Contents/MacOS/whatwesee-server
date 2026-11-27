@@ -1,7 +1,8 @@
 #!/bin/bash
 # whatwesee server: the uploader's background part (a hidden app inside whatwesee studio).
 # Runs scripts/serve.mjs in the foreground for as long as it's up, so macOS treats it
-# as this app's own work and leaves it alone. The server quits after 20 idle minutes.
+# as this app's own work and leaves it alone. The server quits after 20 idle minutes,
+# and restarts itself (exit 75, looped below) when scripts/*.mjs change.
 
 HELPER="$(cd "$(dirname "$0")/../.." && pwd)"
 STUDIO="$(cd "$HELPER/../../.." && pwd)"   # whatwesee studio.app
@@ -35,4 +36,10 @@ if [ ! -d node_modules/sharp ]; then
 fi
 
 export IDLE_MINUTES=20
-exec "$NODE" scripts/serve.mjs >>"$LOG" 2>&1
+# The server exits with 75 when its code was updated: start it again so the change
+# applies even while the studio window stays open. Any other exit ends this app.
+while :; do
+    "$NODE" scripts/serve.mjs >>"$LOG" 2>&1
+    code=$?
+    [ "$code" -eq 75 ] || exit "$code"
+done

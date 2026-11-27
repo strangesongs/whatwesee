@@ -27,7 +27,10 @@ spawned once the app's main process exits:
   changed, `pkill`s it (so code updates apply on next open). If port 8091 isn't answering, `open -g -a` the hidden helper,
   waits for it, then opens http://localhost:8091/admin/ as a Chrome `--app` window (else the default browser).
 - `Contents/Resources/whatwesee server.app` (LSBackgroundOnly, bash): finds node, `npm install` if sharp is
-  missing, then `exec node scripts/serve.mjs` with IDLE_MINUTES=20, so the server IS that helper app's process.
+  missing, then runs `node scripts/serve.mjs` with IDLE_MINUTES=20 in a loop (the helper stays the app's process).
+  The server exits 75 when scripts/*.mjs changed since it started (checked every 30s while no request is in flight)
+  and the helper starts it again, so code updates apply even if the studio window is never closed (before this, an
+  open window kept a stale server alive for days: Nov 2026, HEIC uploads were refused by a pre-HEIC server).
   It quits 20 min after the page stops pinging `/api/status`. Errors: alert + `~/Library/Logs/whatwesee-studio.log`.
 The app normally lives in the project root (falls back to the absolute path if moved).
 
@@ -39,6 +42,8 @@ The app normally lives in the project root (falls back to the absolute path if m
    uploads (409 + "upload anyway"), renames/reorders albums, writes album notes, and deletes photos.
 3. "publish" on that page = `git add -A && git commit -m "update photos" && git push` (whole repo, not just src/).
 
+Wide-colour photos (a profile wider than sRGB, e.g. iPhone Display P3; `isWideGamut` reads the profile's red primary)
+are saved as Display P3 JPEGs (`withIccProfile('p3')` in `makeWebCopies`); everything else stays untagged sRGB as before.
 iPhone photos (HEIC/HEIF) work in both paths: on a Mac they're converted to JPEG with `/usr/bin/sips` first (`heicToJpeg` in
 `scripts/library.mjs`; sharp can't decode HEVC). RAW/PSD still need exporting.
 
@@ -79,7 +84,12 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
 - The photo viewer's bar lists the albums the open photo is in (current one in ink, others link to that album and its note).
 - Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size).
 - Font: Archivo variable, self-hosted in `src/fonts/` (OFL). No external requests. `src/fonts/Archivo/` is the full download, git-ignored.
-- Mobile (<=860px): stacked header, 44px tap targets, viewer controls at the bottom, swipe to navigate.
+- Mobile (<=860px): stacked header, albums as one sideways-scrolling line (fades at the right; current album scrolled
+  into view), grid rows ~120px so 2-3 photos a row, 44px tap targets, viewer photo edge to edge with controls at the
+  bottom, swipe to navigate.
+- Viewer full screen (all sizes): tapping the photo toggles `.is-immersive` (controls hidden, black background) and asks
+  for real browser fullscreen where allowed (not iPhone Safari). The viewer focuses itself on open, not the close button,
+  so taps don't leave a focus ring.
 - `scripts/serve.mjs` is the local server (static `src/`, `/admin/` page, `/api/*` for it). Bound to 127.0.0.1;
   rejects other Host headers and cross-origin POSTs. `scripts/watch.mjs` is the inbox watcher.
 

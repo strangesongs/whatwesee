@@ -87,20 +87,43 @@ export const thumbPath = (p) => path.join(dirOf(p), 'thumbs', p.file);
 
 /* Images */
 
+// Does this colour profile hold more colour than sRGB (Display P3 from iPhones and most
+// HEICs, Adobe RGB from some scanners)? Profiles name themselves inconsistently, so read
+// the red primary instead: its X value (the rXYZ tag) is 0.436 for sRGB, 0.515 for
+// Display P3 and 0.610 for Adobe RGB. Profiles without one (gray, CMYK) count as not wide.
+export function isWideGamut(icc) {
+    if (!icc || icc.length < 132) return false;
+    const tags = icc.readUInt32BE(128);
+    for (let i = 0; i < tags && 132 + i * 12 + 12 <= icc.length; i++) {
+        const at = 132 + i * 12;
+        if (icc.toString('latin1', at, at + 4) !== 'rXYZ') continue;
+        const offset = icc.readUInt32BE(at + 4);
+        if (offset + 12 > icc.length || icc.toString('latin1', offset, offset + 4) !== 'XYZ ') return false;
+        return icc.readInt32BE(offset + 8) / 65536 > 0.47; // s15Fixed16 number
+    }
+    return false;
+}
+
 // Makes the 3200px and 800px copies of `input` (a path or a Buffer) as <name>,
 // in src/photos/ or (hidden) staging/.
 export async function makeWebCopies(input, name, { hidden = false } = {}) {
     const sharp = await loadSharp();
     const p = { file: name, hidden };
     await fs.mkdir(path.dirname(thumbPath(p)), { recursive: true });
+    // Wide-colour photos stay wide: saved as Display P3 instead of squeezed into sRGB.
+    // Browsers on P3 screens (Macs, iPhones) show the full colours; others map them to sRGB.
+    const { icc } = await sharp(input, { failOn: 'none' }).metadata();
+    const wide = isWideGamut(icc);
     // rotate() bakes in the EXIF orientation; sharp drops all metadata
-    // (including GPS location) from the output by default.
-    const make = (size, dest, quality) =>
-        sharp(input, { failOn: 'none' })
+    // (including GPS location) from the output by default, except the colour profile
+    // withIccProfile() attaches.
+    const make = (size, dest, quality) => {
+        const img = sharp(input, { failOn: 'none' })
             .rotate()
-            .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true })
-            .jpeg({ quality, mozjpeg: true })
-            .toFile(dest);
+            .resize({ width: size, height: size, fit: 'inside', withoutEnlargement: true });
+        if (wide) img.withIccProfile('p3');
+        return img.jpeg({ quality, mozjpeg: true }).toFile(dest);
+    };
     const info = await make(FULL, fullPath(p), 82);
     await make(THUMB, thumbPath(p), 78);
     return { w: info.width, h: info.height };

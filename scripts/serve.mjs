@@ -77,6 +77,8 @@ function findPhoto(lib, file) {
 /* API used by scripts/admin/ */
 
 const STARTED = Date.now(); // the app restarts the server when scripts/ is newer than this
+const SCRIPTS = path.dirname(fileURLToPath(import.meta.url));
+const RESTART = 75; // exit code that tells the studio's helper app to start the server again
 
 const routes = {
     'GET /api/library': () => readLibrary(),
@@ -282,11 +284,27 @@ async function serveFile(res, root, pathname) {
 const IDLE_MINUTES = Number(process.env.IDLE_MINUTES) || 0;
 let lastSeen = Date.now();
 let active = 0;
+// The server's code changed since it started (e.g. an update to scripts/*.mjs)?
+const codeChanged = async () => {
+    const names = await fs.readdir(SCRIPTS).catch(() => []);
+    for (const n of names.filter((x) => x.endsWith('.mjs'))) {
+        const s = await fs.stat(path.join(SCRIPTS, n)).catch(() => null);
+        if (s && s.mtimeMs > STARTED) return true;
+    }
+    return false;
+};
+
 if (IDLE_MINUTES) {
-    setInterval(() => {
-        if (!active && Date.now() - lastSeen > IDLE_MINUTES * 60_000) {
+    setInterval(async () => {
+        if (active) return;
+        if (Date.now() - lastSeen > IDLE_MINUTES * 60_000) {
             console.log(`${new Date().toISOString()} closing: upload page not open for ${IDLE_MINUTES} min`);
             process.exit(0);
+        }
+        // pick up new code without waiting for the app to be reopened (the helper starts us again)
+        if (await codeChanged() && !active) {
+            console.log(`${new Date().toISOString()} restarting: the studio's code was updated`);
+            process.exit(RESTART);
         }
     }, 30_000).unref();
 }
