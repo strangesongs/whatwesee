@@ -1,10 +1,134 @@
-/* Phone layout, second try (only m.html loads this; desktop is unchanged).
-   One-line header with an "albums" menu, 2-column grid, and tapping a photo turns the
-   page into one full-width column of the album (m.js "stack") instead of a viewer overlay. */
+/* Phone layout, test page (only m.html loads this; desktop is unchanged).
+   One-line header with an "albums" menu, the album name above its photos, a 2-column grid,
+   and a Photos-style viewer (#pv in m.html, driven by m.js). */
 
 .nav-toggle,
 .album-head {
     display: none;
+}
+
+/* Phone viewer: full screen on black; swipe sideways between photos (snapping), tap to hide the
+   controls; the photo fits whatever way the phone is held. */
+.pv {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: #000;
+    color: #fff;
+}
+
+.pv[hidden] {
+    display: none;
+}
+
+.pv:focus {
+    outline: none;
+}
+
+/* black behind Safari's toolbar and status bar too while it's open */
+html.pv-open,
+html.pv-open body {
+    background: #000;
+}
+
+.pv-track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    overscroll-behavior: contain;
+    touch-action: pan-x pinch-zoom;
+}
+
+.pv-track::-webkit-scrollbar {
+    display: none;
+}
+
+.pv-slide {
+    flex: 0 0 100%;
+    height: 100%;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+}
+
+.pv-slide img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.pv-top,
+.pv-tags {
+    position: absolute;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 11px;
+    transition: opacity 200ms ease;
+}
+
+.pv-top {
+    top: 0;
+    justify-content: space-between;
+    padding-top: env(safe-area-inset-top);
+    background: linear-gradient(rgba(0, 0, 0, 0.5), transparent);
+}
+
+.pv-top button {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #fff;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+}
+
+.pv-count {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pv-tags {
+    bottom: 0;
+    justify-content: center;
+    gap: 0 22px;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+}
+
+.pv-tags[hidden] {
+    display: none;
+}
+
+.pv-tags a,
+.pv-tags [aria-current] {
+    display: inline-block;
+    padding: 14px 0;
+}
+
+.pv-tags a {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pv-tags [aria-current] {
+    color: #fff;
+}
+
+.pv.is-bare .pv-top,
+.pv.is-bare .pv-tags {
+    opacity: 0;
+    pointer-events: none;
 }
 
 @media (max-width: 860px) {
@@ -67,46 +191,35 @@
 
     main {
         order: 4;
-        padding: 0 16px 40px;
+        padding: 0 16px 0;
     }
 
+    /* name, email, site: evenly spaced, set apart from the photos by a hairline */
     .contact {
         order: 5;
+        flex: 1 1 100%;
+        gap: 0;
+        margin: 40px 16px 0;
+        padding: 12px 0 32px;
+        border-top: 1px solid var(--placeholder);
     }
 
-    /* the album you're in, above its photos; in the stack it stays at the top with a way back */
+    .contact span,
+    .contact a {
+        display: block;
+        padding: 6px 0;
+        line-height: 1.6;
+    }
+
     .album-head {
         display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 1rem;
         padding: 6px 0 14px;
         text-transform: uppercase;
         letter-spacing: 0.16em;
         font-size: 11px;
     }
 
-    .album-head[hidden],
-    .album-head a[hidden] {
-        display: none;
-    }
-
-    .album-head a {
-        color: var(--muted);
-        padding: 12px 0;
-        margin: -12px 0;
-    }
-
-    main.is-stack .album-head {
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        margin: 0 -16px;
-        padding: 12px 16px;
-        background: var(--paper);
-    }
-
-    main.is-stack .album-note {
+    .album-head[hidden] {
         display: none;
     }
 
@@ -116,8 +229,7 @@
         align-items: flex-start;
     }
 
-    .gallery.is-cols::after,
-    .gallery.is-stack::after {
+    .gallery.is-cols::after {
         display: none;
     }
 
@@ -131,25 +243,5 @@
 
     .gallery .col .tile {
         flex: none;
-    }
-
-    /* stack: every photo the full width of the screen */
-    .gallery.is-stack {
-        flex-direction: column;
-        flex-wrap: nowrap;
-        gap: 12px;
-        margin: 0 -16px;
-    }
-
-    .shot {
-        background: var(--placeholder);
-        scroll-margin-top: 40px;
-    }
-
-    .shot img {
-        display: block;
-        width: 100%;
-        height: auto;
-        transition: opacity 600ms ease;
     }
 }

@@ -15,13 +15,18 @@
     const lbPrev = $('lb-prev');
     const lbNext = $('lb-next');
     const layoutEl = document.querySelector('.layout');
-    const mainEl = document.querySelector('main');
     const navToggle = $('nav-toggle');
     const headEl = $('album-head');
     const headTitle = $('album-title');
-    const headBack = $('album-back');
-    // phones: no viewer overlay. Albums are a 2-column grid; tapping a photo turns the page into
-    // one full-width column of the album, starting at that photo ("stack"). Desktop is unchanged.
+    // phones get their own viewer (pv): full screen on black, swipe between photos, tap to hide the
+    // controls, fills the screen when the phone is turned. Desktop keeps the lightbox above.
+    const pv = $('pv');
+    const pvTrack = $('pv-track');
+    const pvClose = $('pv-close');
+    const pvCount = $('pv-count');
+    const pvTags = $('pv-tags');
+    const themeMeta = document.querySelector('meta[name="theme-color"]');
+    const PAPER = themeMeta ? themeMeta.content : '#fbfaf8';
     const phone = window.matchMedia('(max-width: 860px)');
 
     const SITE = 'what we see is what we are';
@@ -43,9 +48,9 @@
     let touchX = null;
     let touchY = null;
     let cover = null;
-    let mode = 'grid'; // 'grid' | 'stack' (phones only)
-    let gridY = null; // where the grid was scrolled to before opening the stack
-    let stackFile = null; // the photo the stack was opened at
+    let pvIdx = -1;
+    let pvList = null;
+    let pvWidth = 0;
 
     const fullSrc = (p) => `photos/${p.file}`;
     const thumbSrc = (p) => `photos/thumbs/${p.file}`;
@@ -117,11 +122,10 @@
 
     function renderGrid() {
         const frag = document.createDocumentFragment();
-        galleryEl.classList.remove('is-stack');
         galleryEl.classList.toggle('is-cols', phone.matches);
         if (phone.matches) {
-            // two columns, each photo at its real shape; each goes in the shorter column so the
-            // album order still reads left-to-right, top-to-bottom
+            // phones: two columns, each photo at its real shape; each goes in the shorter column so
+            // the album order still reads left-to-right, top-to-bottom
             const cols = [document.createElement('div'), document.createElement('div')];
             const height = [0, 0];
             list.forEach((p, i) => {
@@ -138,57 +142,6 @@
         }
         galleryEl.textContent = '';
         galleryEl.appendChild(frag);
-    }
-
-    // phones: the whole album as one full-width column; pinch-zoom and Safari's toolbar behave normally
-    function renderStack(at) {
-        const frag = document.createDocumentFragment();
-        galleryEl.classList.remove('is-cols');
-        galleryEl.classList.add('is-stack');
-        list.forEach((p, j) => {
-            const shot = document.createElement('div');
-            shot.className = 'shot';
-            shot.id = `shot-${j}`;
-            const img = document.createElement('img');
-            const long = Math.max(p.w, p.h);
-            img.src = thumbSrc(p);
-            img.srcset = `${thumbSrc(p)} ${Math.round((800 * p.w) / long)}w, ${fullSrc(p)} ${p.w}w`;
-            img.sizes = '100vw';
-            img.width = p.w;
-            img.height = p.h;
-            img.alt = '';
-            img.decoding = 'async';
-            img.classList.add('fade');
-            const shown = () => img.classList.add('is-loaded');
-            img.addEventListener('load', shown, { once: true });
-            img.addEventListener('error', shown, { once: true });
-            if (j < at - 1 || j > at + 2) img.loading = 'lazy';
-            shot.appendChild(img);
-            if (img.complete && img.naturalWidth) shown();
-            frag.appendChild(shot);
-        });
-        galleryEl.textContent = '';
-        galleryEl.appendChild(frag);
-    }
-
-    function showStack(i) {
-        mode = 'stack';
-        stackFile = list[i].file;
-        mainEl.classList.add('is-stack');
-        headBack.href = albumHash(view);
-        headBack.hidden = false;
-        renderStack(i);
-        const el = document.getElementById(`shot-${i}`);
-        if (el) el.scrollIntoView({ block: 'start' });
-    }
-
-    // back from the stack: the grid, where it was (or with the last photo in view)
-    function leaveStack() {
-        if (mode !== 'stack') return false;
-        mode = 'grid';
-        mainEl.classList.remove('is-stack');
-        headBack.hidden = true;
-        return true;
     }
 
     // An album's note: plain text. Blank line = new paragraph, line break kept,
@@ -233,8 +186,6 @@
         galleryEl.hidden = false;
         headTitle.textContent = album ? album.title : 'all';
         headEl.hidden = false;
-        leaveStack();
-        gridY = null;
         window.scrollTo(0, 0);
         renderNav();
         renderNote(album);
@@ -335,7 +286,6 @@
         document.title = SITE;
         renderNav();
         renderNote(null);
-        leaveStack();
         headEl.hidden = true;
         galleryEl.textContent = '';
         galleryEl.hidden = true;
@@ -352,8 +302,8 @@
     }
 
     // the albums this photo is in, in sidebar order; each opens that album (and its note)
-    function renderPhotoTags(p) {
-        lbTags.textContent = '';
+    function renderPhotoTags(p, el = lbTags) {
+        el.textContent = '';
         for (const a of albums.filter((x) => p.tags.includes(x.slug))) {
             let item;
             if (a.slug === view) {
@@ -364,9 +314,9 @@
                 item.href = albumHash(a.slug);
             }
             item.textContent = a.title;
-            lbTags.appendChild(item);
+            el.appendChild(item);
         }
-        lbTags.hidden = !lbTags.childElementCount;
+        el.hidden = !el.childElementCount;
     }
 
     function show(i) {
@@ -394,7 +344,73 @@
         show(i);
     }
 
+    /* Phone viewer: one slide per photo in a sideways scroller that snaps, so swiping follows
+       the finger like the Photos app. Images load for the open photo and its neighbours. */
+
+    function pvLoad(j) {
+        const slide = pvTrack.children[j];
+        if (!slide) return;
+        const img = slide.firstChild;
+        if (img.getAttribute('src')) return;
+        const p = pvList[j];
+        const long = Math.max(p.w, p.h);
+        img.srcset = `${thumbSrc(p)} ${Math.round((800 * p.w) / long)}w, ${fullSrc(p)} ${p.w}w`;
+        img.sizes = '100vw';
+        img.src = thumbSrc(p);
+    }
+
+    function pvShow(i) {
+        pvIdx = i;
+        pvCount.textContent = `${i + 1} / ${pvList.length}`;
+        renderPhotoTags(pvList[i], pvTags);
+        pvLoad(i);
+        pvLoad(i - 1);
+        pvLoad(i + 1);
+    }
+
+    function openPv(i) {
+        if (i < 0) return;
+        if (pv.hidden) {
+            pv.hidden = false;
+            pv.classList.remove('is-bare');
+            document.documentElement.classList.add('pv-open');
+            document.body.classList.add('no-scroll');
+            if (themeMeta) themeMeta.content = '#000';
+            pv.focus();
+        }
+        if (pvList !== list) {
+            pvList = list;
+            pvTrack.textContent = '';
+            for (const p of list) {
+                const slide = document.createElement('div');
+                slide.className = 'pv-slide';
+                const img = document.createElement('img');
+                img.alt = '';
+                img.decoding = 'async';
+                slide.appendChild(img);
+                pvTrack.appendChild(slide);
+            }
+        }
+        pvWidth = pvTrack.clientWidth;
+        pvTrack.scrollLeft = i * pvWidth;
+        pvShow(i);
+    }
+
+    function closePv() {
+        if (pv.hidden) return;
+        pv.hidden = true;
+        document.documentElement.classList.remove('pv-open');
+        document.body.classList.remove('no-scroll');
+        if (themeMeta) themeMeta.content = PAPER;
+        // back on the grid with the last photo you looked at in view
+        const p = pvList && pvList[pvIdx];
+        const tile = p && galleryEl.querySelector(`[data-file="${CSS.escape(p.file)}"]`);
+        if (tile) tile.scrollIntoView({ block: 'nearest' });
+        pvIdx = -1;
+    }
+
     function closeBox() {
+        closePv();
         if (lb.hidden) return;
         setImmersive(false);
         lb.hidden = true;
@@ -429,23 +445,15 @@
     /* Routing:  # (cover)  |  #all  |  #album/<tag>  |  #album/<tag>/<file>  |  #photo/<file>
        (old links like #photo/<album>/<file> still open the photo) */
 
-    // a photo link: the viewer on desktop, the full-width stack on phones
     function openPhoto(p) {
-        if (!phone.matches) {
-            if (leaveStack()) renderGrid();
-            openAt(list.indexOf(p));
-            return;
-        }
-        closeBox();
-        showStack(list.indexOf(p));
+        if (phone.matches) openPv(list.indexOf(p));
+        else openAt(list.indexOf(p));
     }
 
     function route() {
         const h = decodeURIComponent(location.hash.slice(1));
         const byFile = (file) => photos.find((p) => p.file === file);
-        const y = window.scrollY;
-        const fromGrid = mode === 'grid' && renderedView !== COVER && renderedView !== null;
-        const before = renderedView;
+
         layoutEl.classList.remove('nav-open');
         navToggle.setAttribute('aria-expanded', 'false');
 
@@ -453,7 +461,6 @@
         if (m && byFile(m[2])) {
             const p = byFile(m[2]);
             setView(p.tags.includes(m[1]) ? m[1] : '');
-            gridY = fromGrid && before === renderedView ? y : null;
             openPhoto(p);
             return;
         }
@@ -461,32 +468,16 @@
         m = h.match(/^photo\/(?:[^/]+\/)?([^/]+)$/);
         if (m && byFile(m[1])) {
             const p = byFile(m[1]);
-            if (!list.includes(p) || (phone.matches && renderedView === COVER)) setView('');
-            gridY = fromGrid && before === renderedView ? y : null;
+            if (!list.includes(p)) setView('');
             openPhoto(p);
             return;
         }
 
         closeBox();
         m = h.match(/^album\/([^/]+)$/);
-        if (m || h === 'all') {
-            const keepY = gridY;
-            const lastFile = stackFile;
-            setView(m ? m[1] : '');
-            if (leaveStack() || !galleryEl.querySelector('.tile')) {
-                renderGrid();
-                if (keepY !== null) window.scrollTo(0, keepY);
-                else {
-                    const t = lastFile && galleryEl.querySelector(`[data-file="${CSS.escape(lastFile)}"]`);
-                    if (t) t.scrollIntoView({ block: 'center' });
-                }
-            } else if (before === renderedView && keepY !== null) {
-                window.scrollTo(0, keepY);
-            }
-            gridY = null;
-        } else {
-            showCover();
-        }
+        if (m) setView(m[1]);
+        else if (h === 'all') setView('');
+        else showCover();
     }
 
     function init(data) {
@@ -505,7 +496,7 @@
         window.addEventListener('hashchange', route);
         // crossing the phone/desktop size: lay the page out again for the new size
         phone.addEventListener('change', () => {
-            leaveStack();
+            closeBox();
             if (renderedView !== COVER) renderedView = null;
             route();
         });
@@ -515,17 +506,27 @@
 
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
-    // "grid" in the stack: same as Back when the stack was opened from the grid, so history stays tidy
-    headBack.addEventListener('click', (e) => {
-        if (mode === 'stack' && gridY !== null) {
-            e.preventDefault();
-            history.back();
-        }
-    });
-
     navToggle.addEventListener('click', () => {
         const open = layoutEl.classList.toggle('nav-open');
         navToggle.setAttribute('aria-expanded', String(open));
+    });
+
+    pvClose.addEventListener('click', requestClose);
+    // tap the photo: hide or show the controls
+    pvTrack.addEventListener('click', () => pv.classList.toggle('is-bare'));
+    pvTrack.addEventListener('scroll', () => {
+        const w = pvTrack.clientWidth;
+        if (!w || w !== pvWidth || !pvList) return; // mid-rotation: the resize handler re-aligns
+        const j = Math.round(pvTrack.scrollLeft / w);
+        if (j === pvIdx || j < 0 || j >= pvList.length) return;
+        pvShow(j);
+        history.replaceState(null, '', photoHash(pvList[j]));
+    }, { passive: true });
+    // turning the phone: stay on the same photo
+    window.addEventListener('resize', () => {
+        if (pv.hidden || pvIdx < 0) return;
+        pvWidth = pvTrack.clientWidth;
+        pvTrack.scrollLeft = pvIdx * pvWidth;
     });
 
     lbClose.addEventListener('click', requestClose);
@@ -537,6 +538,7 @@
     lbNext.addEventListener('click', () => step(1));
 
     document.addEventListener('keydown', (e) => {
+        if (!pv.hidden && e.key === 'Escape') requestClose();
         if (lb.hidden) return;
         if (e.key === 'Escape') {
             requestClose();

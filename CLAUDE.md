@@ -89,9 +89,11 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
   bottom, swipe to navigate.
 - Phone layout v2 (test page, Nov 2026): `src/m.html` (noindex, unlinked) = index.html + `m.css` + `m.js` (a fork of app.js).
   Phones get a one-line header with an "albums" menu, the album name above the photos, a 2-column grid (each photo
-  into the shorter column), and tapping a photo turns the page into one full-width column of the album ("stack", no
-  overlay; sticky album name + "grid"). Desktop is identical to index.html. If approved: fold m.css into styles.css,
-  m.js into app.js, move the new header/album-head markup into index.html, and delete the m.* files.
+  into the shorter column), evenly spaced contact lines under a hairline, and a Photos-style viewer (`#pv`): full screen
+  on black (html background + theme-color go black too, so nothing shows behind Safari's toolbar), a scroll-snap track
+  to swipe between photos, tap to hide the controls, stays on the same photo when the phone turns. Desktop is identical
+  to index.html. (A first try replaced the viewer with a full-width scrolling column; the owner preferred a viewer.)
+  If approved: fold m.css into styles.css, m.js into app.js, the new markup into index.html, delete the m.* files.
 - Viewer full screen (all sizes): tapping the photo toggles `.is-immersive` (controls hidden, black background) and asks
   for real browser fullscreen where allowed (not iPhone Safari). The viewer focuses itself on open, not the close button,
   so taps don't leave a focus ring.
