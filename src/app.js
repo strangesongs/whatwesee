@@ -233,17 +233,15 @@
         coverEl.textContent = '';
         coverEl.style.setProperty('--ar', (p.w / p.h).toFixed(4));
 
-        const link = document.createElement('a');
+        // desktop: the cover is just a picture (its album links are underneath, so a click on the
+        // big photo doesn't send people to the album and on into the viewer by accident)
+        const link = document.createElement('div');
         link.className = 'cover-link';
-        link.href = home ? albumHash(home.slug) : `#photo/${p.file}`;
-        link.setAttribute('aria-label', home ? `open the album ${home.title}` : 'open photo');
         // the small grid copy shows straight away underneath; the sharp one fades in over it
         link.style.backgroundImage = `url("${thumbSrc(p)}")`;
-        // phones: the cover opens in the viewer (its albums are linked underneath); desktop opens its album
-        link.addEventListener('click', (e) => {
+        // phones: tapping opens it in the viewer, in the album it comes from; closing comes back here
+        link.addEventListener('click', () => {
             if (!phone.matches) return;
-            e.preventDefault();
-            // swipe through the album it comes from (the one desktop opens); closing comes back here
             location.hash = home ? `#album/${home.slug}/${p.file}` : `#photo/${p.file}`;
         });
         // phones get the 800px grid copy (plenty at phone width, a fraction of the download)

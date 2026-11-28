@@ -77,13 +77,15 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
 - Landing page (`#`) = one cover photo where the grid would be: a random photo tagged `cover` (a hidden tag: never
   in the sidebar, the viewer's album list or the cover caption; `#album/cover` falls back to "all"), or a random
   landscape (w/h >= 1.2) when nothing is tagged `cover`. New on each load,
-  sized so photo + caption fit in the window, centred in the column. Clicking it opens its most specific album (the tag with the fewest photos, so a place beats
-  b/w or color; untagged opens the viewer). Underneath: its album links and date taken, in the viewer bar's type.
+  sized so photo + caption fit in the window, centred in the column. On desktop the photo itself isn't a link (Nov 2026: a click went photo -> album -> viewer
+  by accident; the album links underneath do that job). `homeAlbum` = its most specific album (the tag with the fewest
+  photos, so a place beats b/w or color), used by the phone tap below. Underneath: its album links and date taken, in the viewer bar's type.
   Phones (<=860px) load the 800px thumb for it via <picture>, larger screens the full copy.
   The thumb is also the cover link's background, so a photo shows at once and the full copy fades in over it.
   Nothing in the sidebar is active on the cover; "all" links to `#all`. (`showCover` / `renderCover` in `app.js`.)
 - The photo viewer's bar lists the albums the open photo is in (current one in ink, others link to that album and its note).
-- Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size).
+- Grid is pure-CSS justified rows (each tile's `--ar` aspect ratio drives its flex size). Target row height `--row`:
+  290px, 380px at >=1600px wide, 460px at >=2200px (bumped Nov 2026 for big monitors).
 - Font: Archivo variable, self-hosted in `src/fonts/` (OFL). No external requests. `src/fonts/Archivo/` is the full download, git-ignored.
 - Phones (<=860px, the `phone` media query in `app.js` matches the CSS block): one-line header (wordmark + "albums"
   button that opens the album list), the album's name above its photos (`#album-head`), a 2-column grid (`.gallery.is-cols`;

@@ -15,7 +15,7 @@
     --placeholder: #ecebe6;
     --side: 264px;
     --gap: 16px;
-    --row: 290px; /* target row height of the photo grid */
+    --row: 290px; /* target row height of the photo grid (bigger on large screens, below) */
     --font: "Archivo", system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
@@ -235,11 +235,6 @@ img.fade.is-loaded {
     width: 100%;
     height: auto;
     transition: opacity 600ms ease;
-}
-
-.cover-link:hover img.is-loaded {
-    opacity: 0.92;
-    transition-duration: 150ms;
 }
 
 .cover-meta {
@@ -558,6 +553,19 @@ html.pv-open body {
     display: none;
 }
 
+/* Large screens: taller grid rows so photos aren't postage stamps on a wide monitor */
+@media (min-width: 1600px) {
+    :root {
+        --row: 380px;
+    }
+}
+
+@media (min-width: 2200px) {
+    :root {
+        --row: 460px;
+    }
+}
+
 /* Narrow screens (phones): one-line header (wordmark + "albums" menu), the album's name above
    its photos, a 2-column grid (app.js puts each photo in the shorter column), contact below.
    Photos open in the phone viewer above. */
@@ -669,6 +677,10 @@ html.pv-open body {
 
     .cover {
         width: 100%;
+    }
+
+    .cover-link {
+        cursor: pointer; /* phones tap it to open the viewer */
     }
 
     .cover-meta {
