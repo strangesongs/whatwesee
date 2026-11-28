@@ -7,7 +7,7 @@
 HELPER="$(cd "$(dirname "$0")/../.." && pwd)"
 STUDIO="$(cd "$HELPER/../../.." && pwd)"   # whatwesee studio.app
 ROOT="$(dirname "$STUDIO")"
-[ -f "$ROOT/scripts/serve.mjs" ] || ROOT="/Users/jcrtll/Desktop/programming/whatwesee"
+[ -f "$ROOT/scripts/serve.mjs" ] || ROOT="$HOME/programming/whatwesee"
 LOG="$HOME/Library/Logs/whatwesee-studio.log"
 mkdir -p "$(dirname "$LOG")"
 

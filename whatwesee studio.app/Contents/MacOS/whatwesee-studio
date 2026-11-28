@@ -7,7 +7,7 @@
 APP="$(cd "$(dirname "$0")/../.." && pwd)"
 HELPER="$APP/Contents/Resources/whatwesee server.app"
 ROOT="$(dirname "$APP")"
-[ -f "$ROOT/scripts/serve.mjs" ] || ROOT="/Users/jcrtll/Desktop/programming/whatwesee"
+[ -f "$ROOT/scripts/serve.mjs" ] || ROOT="$HOME/programming/whatwesee"
 PORT=8091
 URL="http://localhost:$PORT/admin/"
 LOG="$HOME/Library/Logs/whatwesee-studio.log"
