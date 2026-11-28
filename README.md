@@ -1,6 +1,6 @@
 # what we see is what we are
 
-Photography by j cretella. A plain HTML/CSS/JS gallery with no framework and no runtime dependencies. Live at https://strangesongs.github.io/whatwesee/
+Photography by j cretella. A plain HTML/CSS/JS gallery with no framework and no runtime dependencies. Live at https://whatweseeiswhatweare.com/
 
 ## Adding photos
 

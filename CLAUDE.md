@@ -1,7 +1,12 @@
 # what we see is what we are
 
 Photography portfolio by j cretella. Static site, no framework, no database.
-Live at https://strangesongs.github.io/whatwesee/ (linked from the "photography" button on strangesongs.github.io).
+Live at https://whatweseeiswhatweare.com (linked from the "photography" button on strangesongs.github.io).
+Domains (Cloudflare): whatweseeiswhatweare.com is the repo's GitHub Pages custom domain (A records to GitHub's
+185.199.108-111.153 + www CNAME to strangesongs.github.io, all DNS only/grey). wearewhatwesee.com (and www) forwards
+to it with a Cloudflare Redirect Rule (proxied placeholder A records 192.0.2.1; 301 keeping the path). Both domains are
+verified in the GitHub account's Pages settings; keep their `_github-pages-challenge` TXT records.
+The old https://strangesongs.github.io/whatwesee/ address is forwarded by GitHub to the custom domain.
 
 ## Developer commands (the owner uses whatwesee studio.app instead; see below)
 
@@ -61,7 +66,8 @@ scans, more for higher-resolution sources; metadata/GPS stripped) are committed.
 
 ## How it works
 
-- `src/` is the entire site. `src/index.html`, `app.js`, `styles.css`; paths are relative because it lives under `/whatwesee/`.
+- `src/` is the entire site. `src/index.html`, `app.js`, `styles.css`; paths are relative (it used to live under `/whatwesee/`); `404.html` uses root paths (`/styles.css`) because
+  it's served at any depth on the custom domain. The share tags/canonical in `index.html` hold the full domain.
 - Photos are flat: `src/photos/<file>.jpg` + `src/photos/thumbs/<file>.jpg`. Hidden photos: `staging/<file>.jpg` (+ thumbs).
 - The library (source of truth) is `staging/library.json` (git-ignored, local only):
   `{ albums: [{slug, title, order?, note?}], photos: [{file, w, h, tags, date?, hidden?, dhash?}] }`. `albums` = sidebar
